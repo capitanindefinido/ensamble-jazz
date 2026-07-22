@@ -122,8 +122,9 @@ export default function SongSheet({ song, onClose }) {
     } else {
       p.setAst(displayAst);
       p.setBpm(Number(song.bpm) || 120);
-      // Retomar pausa sin fromMeasure; partida marcada solo en arranque fresco
-      if (startMeasure != null && !p.paused) {
+      // Si hay compás marcado, siempre arranca ahí (anula pausa previa).
+      // Sin marca: retoma pausa o empieza desde 0.
+      if (startMeasure != null) {
         await p.play({ fromMeasure: startMeasure });
       } else {
         await p.play();
@@ -142,6 +143,9 @@ export default function SongSheet({ song, onClose }) {
 
   const handleMeasureSelect = (index) => {
     setStartMeasure((prev) => (prev === index ? null : index));
+    // Invalidar pausa: el highlight viejo no debe “ganar” al Play siguiente
+    playerRef.current?.discardPause?.();
+    setActiveMeasure(null);
   };
 
   const isTransposed = shift !== 0;

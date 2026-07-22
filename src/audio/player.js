@@ -287,6 +287,11 @@ export class ChartPlayer {
     // Mantiene el último onMeasure (compás resaltado)
   }
 
+  /** Descarta cursor de pausa (p.ej. al marcar otro compás de partida). */
+  discardPause() {
+    this._pausedAt = null;
+  }
+
   stop({ silent = false } = {}) {
     this.scheduler.stop();
     this._cursor = null;
