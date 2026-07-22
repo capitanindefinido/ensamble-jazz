@@ -1,16 +1,36 @@
+import { useEffect, useRef } from "react";
 import { formatPitch } from "./parse.js";
 
 /**
  * Renderer del chart sobre el papel.
  * Grid de 4 compases por fila. data-measure={index} para el slice 7.
  */
-export default function Chart({ ast }) {
+export default function Chart({ ast, activeMeasure = null }) {
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (activeMeasure == null || !rootRef.current) return;
+    const el = rootRef.current.querySelector(
+      `[data-measure="${activeMeasure}"]`
+    );
+    if (!el || typeof el.scrollIntoView !== "function") return;
+    const reduce =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: reduce ? "auto" : "smooth",
+    });
+  }, [activeMeasure]);
+
   if (!ast?.sections?.length) {
     return null;
   }
 
   return (
-    <div className="be-chart">
+    <div className="be-chart" ref={rootRef}>
       {ast.sections.map((sec, si) => (
         <section key={`${sec.label}-${si}`} className="be-chart-section">
           {sec.label ? (
@@ -20,9 +40,12 @@ export default function Chart({ ast }) {
             {chunk(sec.measures, 4).map((row, ri) => (
               <div key={ri} className="be-chart-row">
                 {row.map((m) => (
-                  <Measure key={m.index} measure={m} />
+                  <Measure
+                    key={m.index}
+                    measure={m}
+                    active={activeMeasure === m.index}
+                  />
                 ))}
-                {/* Relleno para mantener 4 columnas */}
                 {Array.from({ length: 4 - row.length }).map((_, i) => (
                   <div key={`pad-${i}`} className="be-chart-measure pad" />
                 ))}
@@ -35,12 +58,13 @@ export default function Chart({ ast }) {
   );
 }
 
-function Measure({ measure: m }) {
+function Measure({ measure: m, active }) {
   const cls =
     "be-chart-measure" +
     (m.invalid ? " invalid" : "") +
     (m.openRepeat ? " open-rep" : "") +
-    (m.closeRepeat ? " close-rep" : "");
+    (m.closeRepeat ? " close-rep" : "") +
+    (active ? " active" : "");
 
   return (
     <div className={cls} data-measure={m.index}>
@@ -53,7 +77,6 @@ function Measure({ measure: m }) {
       <div className="be-chart-chords">
         {m.repeatPrev ? (
           <span className="be-chart-pct" aria-label="repite compás anterior">
-            {/* Glifo de repetición de compás (como en lead sheets / Real Book), no el % tipográfico */}
             <svg
               className="be-chart-pct-svg"
               viewBox="0 0 28 36"

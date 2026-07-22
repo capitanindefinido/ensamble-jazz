@@ -128,7 +128,12 @@
 
 /* Chart renderer */
 .be-chart-wrap{margin-bottom:22px;}
-.be-transpose{display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+.be-chart-toolbar{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px;}
+.be-transpose{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:0;}
+.be-play-btn{display:inline-flex; align-items:center; gap:6px; background:var(--paper-ink); color:var(--paper); border:none;
+  border-radius:20px; font-family:"Space Mono",monospace; font-size:12px; padding:7px 14px; cursor:pointer;}
+.be-play-btn:hover{opacity:.9;}
+.be-chart-measure.active{background:rgba(201,162,75,.14); box-shadow:inset 0 0 0 1.5px var(--brass);}
 .be-transpose-btn{width:32px; height:32px; border-radius:8px; border:1.5px solid var(--paper-ink);
   background:none; color:var(--paper-ink); font-family:"Space Mono",monospace; font-size:18px; line-height:1; cursor:pointer;}
 .be-transpose-btn:hover{background:var(--paper-ink); color:var(--paper);}
@@ -196,4 +201,5 @@
 @media (prefers-reduced-motion: reduce){
   .be-sheet, .be-sheet-scrim{animation:none;}
   .be-beat{transition:none;}
+  .be-chart-measure.active{transition:none;}
 }

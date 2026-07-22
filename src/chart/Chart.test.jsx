@@ -34,4 +34,21 @@ describe("Chart renderer", () => {
     expect(container.textContent).toContain("NOPE");
     expect(container.textContent).toMatch(/B/); // Bb sigue ahí
   });
+
+  it("resalta el compás activo vía .active", () => {
+    const { ast } = parseChart(EAST_OF_SUN_CHART);
+    const { container, rerender } = render(
+      <Chart ast={ast} activeMeasure={3} />
+    );
+    expect(
+      container.querySelector('[data-measure="3"]')?.className
+    ).toContain("active");
+    rerender(<Chart ast={ast} activeMeasure={5} />);
+    expect(
+      container.querySelector('[data-measure="3"]')?.className
+    ).not.toContain("active");
+    expect(
+      container.querySelector('[data-measure="5"]')?.className
+    ).toContain("active");
+  });
 });

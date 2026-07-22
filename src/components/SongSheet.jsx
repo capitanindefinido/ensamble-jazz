@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, FileText, Play, Upload, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink, FileText, Pause, Play, Upload, X } from "lucide-react";
 import Metronome from "./Metronome.jsx";
 import Chart, { KeyDisplay, TransposeBar } from "../chart/Chart.jsx";
 import {
@@ -13,6 +13,7 @@ import {
   transposeAst,
   transposePitch,
 } from "../chart/transpose.js";
+import { ChartPlayer } from "../audio/player.js";
 
 function drivePreviewUrl(url) {
   if (!url) return null;
@@ -25,6 +26,10 @@ export default function SongSheet({ song, onClose }) {
   const [showChart, setShowChart] = useState(false);
   const [shift, setShift] = useState(0);
   const [iframeOk, setIframeOk] = useState(true);
+  const [activeMeasure, setActiveMeasure] = useState(null);
+  const [playing, setPlaying] = useState(false);
+
+  const playerRef = useRef(null);
 
   const hasChart = Boolean(song.chart && String(song.chart).trim());
   const hasPdf = Boolean(song.chart_pdf_url && String(song.chart_pdf_url).trim());
@@ -40,7 +45,6 @@ export default function SongSheet({ song, onClose }) {
   );
   const sheetKey = useMemo(() => parseKeyString(song.tono), [song.tono]);
 
-  // Si el Sheet pide otro tono, el chart se muestra en ese tono por defecto
   const baseShift = useMemo(() => {
     if (!chartKey || !sheetKey) return 0;
     return deltaToKey(chartKey, sheetKey);
@@ -59,30 +63,87 @@ export default function SongSheet({ song, onClose }) {
     return transposeAst(baseAst, totalShift, displayKeyPitch);
   }, [baseAst, totalShift, displayKeyPitch]);
 
+  // Player: una instancia por montaje del modal
   useEffect(() => {
+    const player = new ChartPlayer({
+      onMeasure: setActiveMeasure,
+      onPlayingChange: setPlaying,
+    });
+    playerRef.current = player;
+    return () => {
+      player.dispose();
+      playerRef.current = null;
+    };
+  }, []);
+
+  // Sync ast / bpm
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!p) return;
+    p.setAst(displayAst);
+    p.setBpm(Number(song.bpm) || 120);
+  }, [displayAst, song.bpm]);
+
+  // Transponer mientras suena → stop limpio (no audio viejo + chart nuevo)
+  useEffect(() => {
+    playerRef.current?.stop();
+    setActiveMeasure(null);
+  }, [totalShift]);
+
+  // Cambiar de tema → stop
+  useEffect(() => {
+    playerRef.current?.stop();
     setShift(0);
     setShowChart(false);
     setIframeOk(true);
+    setActiveMeasure(null);
   }, [song.titulo, song.chart, song.tono]);
 
   useEffect(() => {
-    const onKey = (e) => e.key === "Escape" && onClose();
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      playerRef.current?.stop();
+      setActiveMeasure(null);
+      onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  const handleClose = () => {
+    playerRef.current?.stop();
+    setActiveMeasure(null);
+    onClose();
+  };
+
+  const togglePlay = async () => {
+    const p = playerRef.current;
+    if (!p || !displayAst) return;
+    if (playing) {
+      p.pause();
+    } else {
+      p.setAst(displayAst);
+      p.setBpm(Number(song.bpm) || 120);
+      await p.play();
+    }
+  };
 
   const isTransposed = shift !== 0;
   const previewUrl = hasPdf ? drivePreviewUrl(song.chart_pdf_url) : null;
 
   return (
-    <div className="be-sheet-scrim" onClick={onClose}>
+    <div className="be-sheet-scrim" onClick={handleClose}>
       <div
         className="be-sheet"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label={song.titulo}
       >
-        <button className="be-sheet-close" onClick={onClose} aria-label="Cerrar">
+        <button
+          className="be-sheet-close"
+          onClick={handleClose}
+          aria-label="Cerrar"
+        >
           <X size={18} />
         </button>
 
@@ -114,26 +175,37 @@ export default function SongSheet({ song, onClose }) {
           {showChart ? (
             hasChart && displayAst ? (
               <div className="be-chart-wrap">
-                <TransposeBar
-                  displayKey={
-                    <KeyDisplay
-                      pitch={displayKeyPitch || sheetKey}
-                      fallback="—"
-                    />
-                  }
-                  isTransposed={isTransposed}
-                  onDown={() => setShift((s) => s - 1)}
-                  onUp={() => setShift((s) => s + 1)}
-                  onReset={() => setShift(0)}
-                />
+                <div className="be-chart-toolbar">
+                  <TransposeBar
+                    displayKey={
+                      <KeyDisplay
+                        pitch={displayKeyPitch || sheetKey}
+                        fallback="—"
+                      />
+                    }
+                    isTransposed={isTransposed}
+                    onDown={() => setShift((s) => s - 1)}
+                    onUp={() => setShift((s) => s + 1)}
+                    onReset={() => setShift(0)}
+                  />
+                  <button
+                    type="button"
+                    className="be-play-btn"
+                    onClick={togglePlay}
+                    aria-label={playing ? "Pausar chart" : "Reproducir chart"}
+                  >
+                    {playing ? <Pause size={14} /> : <Play size={14} />}
+                    <span>{playing ? "Pausa" : "Play"}</span>
+                  </button>
+                </div>
                 {warnings.length > 0 ? (
                   <p className="be-chart-warn">
                     Hay {warnings.length} aviso
-                    {warnings.length === 1 ? "" : "s"} en el chart — los compases
-                    raros aparecen marcados.
+                    {warnings.length === 1 ? "" : "s"} en el chart — los
+                    compases raros aparecen marcados.
                   </p>
                 ) : null}
-                <Chart ast={displayAst} />
+                <Chart ast={displayAst} activeMeasure={activeMeasure} />
               </div>
             ) : hasPdf && previewUrl && iframeOk ? (
               <div className="be-chart-pdf">
@@ -173,7 +245,8 @@ export default function SongSheet({ song, onClose }) {
                 <FileText size={26} strokeWidth={1.4} />
                 <p className="be-chart-empty-t">Aún no hay chart cargado</p>
                 <p className="be-chart-empty-s">
-                  Deja el PDF en la carpeta del ensamble y aparece acá para todos.
+                  Deja el PDF en la carpeta del ensamble y aparece acá para
+                  todos.
                 </p>
                 <button className="be-chart-upload" disabled>
                   <Upload size={14} /> Subir chart
