@@ -4,11 +4,51 @@ import {
   bassMidiForBeat,
   chordTones,
   chordsForBeats,
+  clampFromMeasure,
   flattenMeasures,
   measureBeatTimes,
   secondsPerBeat,
   voicingMidis,
 } from "./player.js";
+import { unlockAudio } from "./scheduler.js";
+
+describe("unlockAudio", () => {
+  it("no lanza sin window/AudioContext (vitest node)", async () => {
+    await expect(unlockAudio()).resolves.toBeNull();
+  });
+});
+
+describe("clampFromMeasure / fromMeasure", () => {
+  it("acota el índice al form", () => {
+    expect(clampFromMeasure(0, 40)).toBe(0);
+    expect(clampFromMeasure(8, 40)).toBe(8);
+    expect(clampFromMeasure(99, 40)).toBe(39);
+    expect(clampFromMeasure(-3, 40)).toBe(0);
+    expect(clampFromMeasure(null, 40)).toBe(0);
+  });
+
+  it("tras count-in el cursor debe usar startMeasureIdx (no siempre 0)", () => {
+    const { ast } = parseChart(EAST_OF_SUN_CHART);
+    const measures = flattenMeasures(ast);
+    const startMeasureIdx = clampFromMeasure(8, measures.length);
+    const cur = {
+      phase: "countin",
+      beat: 3,
+      beats: 4,
+      measureIdx: 0,
+      startMeasureIdx,
+    };
+    cur.beat += 1;
+    if (cur.beat >= cur.beats) {
+      cur.phase = "play";
+      cur.beat = 0;
+      cur.measureIdx = cur.startMeasureIdx ?? 0;
+    }
+    expect(cur.phase).toBe("play");
+    expect(cur.measureIdx).toBe(8);
+    expect(measures[cur.measureIdx].index).toBe(8);
+  });
+});
 
 describe("ChartPlayer — helpers", () => {
   it("aplana el AST en orden global de índices", () => {
@@ -51,7 +91,6 @@ describe("ChartPlayer — helpers", () => {
     expect(m0).toBe(m2);
     expect(m1).toBe(m3);
     expect(m0).not.toBe(m1);
-    // C y G: diferencia de 7 semitonos
     expect(Math.abs(m1 - m0) % 12).toBe(7);
   });
 
@@ -77,7 +116,6 @@ describe("negras siempre a 60/bpm (sin “swing” en el pulso)", () => {
       for (let i = 1; i < times.length; i++) {
         expect(times[i] - times[i - 1]).toBeCloseTo(spb, 12);
       }
-      // Misma grilla que sin feel: el feel no debe mover nada
       expect(times).toEqual(measureBeatTimes(bpm, 4, "", 0));
     }
   );

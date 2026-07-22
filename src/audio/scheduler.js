@@ -25,6 +25,25 @@ export async function resumeAudioContext() {
   return ctx;
 }
 
+/**
+ * Desbloquea audio en iOS/Android: resume + buffer silencioso de 1 sample
+ * en el mismo gesto del usuario. Idempotente y seguro sin `window` (tests).
+ */
+export async function unlockAudio() {
+  const ctx = await resumeAudioContext();
+  if (!ctx) return null;
+  try {
+    const buffer = ctx.createBuffer(1, 1, ctx.sampleRate || 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch {
+    // Algunos entornos de test no implementan createBuffer; el resume basta.
+  }
+  return ctx;
+}
+
 export class LookaheadScheduler {
   constructor({
     lookaheadMs = LOOKAHEAD_MS,

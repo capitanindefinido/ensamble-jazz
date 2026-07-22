@@ -3,7 +3,7 @@ import { Pause, Play } from "lucide-react";
 import {
   LookaheadScheduler,
   playClick,
-  resumeAudioContext,
+  unlockAudio,
 } from "../audio/scheduler.js";
 
 const BEATS_PER_BAR = 4;
@@ -44,7 +44,7 @@ export default function Metronome({ bpm }) {
     let cancelled = false;
     currentBeatRef.current = 0;
 
-    resumeAudioContext().then((audioCtx) => {
+    unlockAudio().then((audioCtx) => {
       if (cancelled || !audioCtx || !schedulerRef.current) return;
       nextNoteTimeRef.current = audioCtx.currentTime + 0.05;
 
@@ -74,7 +74,7 @@ export default function Metronome({ bpm }) {
 
   const toggle = async () => {
     if (!playing) {
-      await resumeAudioContext();
+      await unlockAudio();
       setPlaying(true);
     } else {
       setPlaying(false);

@@ -7,7 +7,7 @@ import { pitchClass } from "../chart/transpose.js";
 import {
   LookaheadScheduler,
   playClick,
-  resumeAudioContext,
+  unlockAudio,
 } from "./scheduler.js";
 
 /** Intervalos (semitonos desde la raíz) por calidad del parser. */
@@ -146,6 +146,13 @@ export function secondsPerBeat(bpm) {
   return 60.0 / Number(bpm);
 }
 
+/** Índice de partida acotado al largo del form. */
+export function clampFromMeasure(fromMeasure, length) {
+  if (!length || length < 1) return 0;
+  if (fromMeasure == null || !Number.isFinite(Number(fromMeasure))) return 0;
+  return Math.max(0, Math.min(length - 1, Math.floor(Number(fromMeasure))));
+}
+
 /**
  * Tiempos absolutos de las negras de un compás desde `startTime`.
  * `feel` se acepta y se ignora a propósito: las negras van derechas
@@ -170,13 +177,18 @@ export class ChartPlayer {
     this.scheduler = new LookaheadScheduler();
     this._ast = null;
     this._bpm = 120;
-    this._cursor = null; // { phase, measureIdx, beat, nextTime, beats, measures }
+    this._cursor = null; // { phase, measureIdx, beat, nextTime, beats, measures, startMeasureIdx }
     this._pausedAt = null;
     this._playing = false;
   }
 
   get playing() {
     return this._playing;
+  }
+
+  /** True si pause() guardó cursor (Play sin fromMeasure retoma). */
+  get paused() {
+    return this._pausedAt != null;
   }
 
   setAst(ast) {
@@ -188,19 +200,28 @@ export class ChartPlayer {
     if (Number.isFinite(n) && n > 0) this._bpm = n;
   }
 
-  async play() {
+  /**
+   * @param {{ fromMeasure?: number }} [opts]
+   * fromMeasure: índice global del compás tras la cuenta de entrada.
+   * Si hay pausa y no se pasa fromMeasure, retoma sin cuenta.
+   */
+  async play(opts = {}) {
     if (!this._ast) return;
     const measures = flattenMeasures(this._ast);
     if (!measures.length) return;
 
-    await resumeAudioContext();
-    const ctx = await resumeAudioContext();
+    const ctx = await unlockAudio();
     if (!ctx) return;
 
     const beats = beatsPerMeasure(this._ast);
+    const hasFrom =
+      opts.fromMeasure != null && Number.isFinite(Number(opts.fromMeasure));
+    const startMeasureIdx = hasFrom
+      ? clampFromMeasure(opts.fromMeasure, measures.length)
+      : 0;
 
-    // Retomar desde pausa: sin cuenta de entrada, desde el cursor guardado
-    if (this._pausedAt) {
+    // Retomar desde pausa (solo si no pedimos un fromMeasure explícito)
+    if (this._pausedAt && !hasFrom) {
       const saved = this._pausedAt;
       this._pausedAt = null;
       this.scheduler.stop();
@@ -211,11 +232,11 @@ export class ChartPlayer {
         nextTime: ctx.currentTime + 0.05,
         beats,
         measures,
+        startMeasureIdx: saved.startMeasureIdx ?? 0,
       };
-      // Si estábamos a medias del count-in, arrancar el form
       if (saved.phase === "countin") {
         this._cursor.phase = "play";
-        this._cursor.measureIdx = 0;
+        this._cursor.measureIdx = this._cursor.startMeasureIdx;
         this._cursor.beat = 0;
       }
       this._playing = true;
@@ -233,12 +254,19 @@ export class ChartPlayer {
       nextTime: ctx.currentTime + 0.06,
       beats,
       measures,
+      startMeasureIdx,
     };
     this._playing = true;
     this.onPlayingChange(true);
     this.onMeasure(null);
 
     this.scheduler.start((api) => this._schedule(api));
+  }
+
+  /** Para y vuelve a tocar desde el compás 0 con cuenta. */
+  async restart() {
+    this.stop({ silent: true });
+    await this.play({ fromMeasure: 0 });
   }
 
   pause() {
@@ -250,6 +278,7 @@ export class ChartPlayer {
       phase: this._cursor.phase,
       measureIdx: this._cursor.measureIdx,
       beat: this._cursor.beat,
+      startMeasureIdx: this._cursor.startMeasureIdx ?? 0,
     };
     this.scheduler.stop();
     this._cursor = null;
@@ -293,7 +322,7 @@ export class ChartPlayer {
         if (cur.beat >= beats) {
           cur.phase = "play";
           cur.beat = 0;
-          cur.measureIdx = 0;
+          cur.measureIdx = cur.startMeasureIdx ?? 0;
         }
       } else {
         const measure = measures[cur.measureIdx];

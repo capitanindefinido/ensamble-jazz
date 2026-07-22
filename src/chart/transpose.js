@@ -232,7 +232,8 @@ export function serializeAst(ast) {
       if (m.openRepeat) cell += "{ ";
       if (m.ending) cell += `N${m.ending} `;
       if (m.alternate) cell += `(${formatChord(m.alternate)}) `;
-      if (m.repeatPrev) cell += "%";
+      if (m.noChord) cell += "N.C.";
+      else if (m.repeatPrev) cell += "%";
       else if (m.invalid) cell += m.raw || "?";
       else cell += (m.chords || []).map(formatChord).join(" ");
       if (m.closeRepeat) cell += " }";

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, FileText, Pause, Play, Upload, X } from "lucide-react";
+import { ExternalLink, FileText, Pause, Play, RotateCcw, Upload, X } from "lucide-react";
 import Metronome from "./Metronome.jsx";
 import Chart, { KeyDisplay, TransposeBar } from "../chart/Chart.jsx";
 import {
@@ -27,6 +27,7 @@ export default function SongSheet({ song, onClose }) {
   const [shift, setShift] = useState(0);
   const [iframeOk, setIframeOk] = useState(true);
   const [activeMeasure, setActiveMeasure] = useState(null);
+  const [startMeasure, setStartMeasure] = useState(null);
   const [playing, setPlaying] = useState(false);
 
   const playerRef = useRef(null);
@@ -63,7 +64,6 @@ export default function SongSheet({ song, onClose }) {
     return transposeAst(baseAst, totalShift, displayKeyPitch);
   }, [baseAst, totalShift, displayKeyPitch]);
 
-  // Player: una instancia por montaje del modal
   useEffect(() => {
     const player = new ChartPlayer({
       onMeasure: setActiveMeasure,
@@ -76,7 +76,6 @@ export default function SongSheet({ song, onClose }) {
     };
   }, []);
 
-  // Sync ast / bpm
   useEffect(() => {
     const p = playerRef.current;
     if (!p) return;
@@ -84,19 +83,18 @@ export default function SongSheet({ song, onClose }) {
     p.setBpm(Number(song.bpm) || 120);
   }, [displayAst, song.bpm]);
 
-  // Transponer mientras suena → stop limpio (no audio viejo + chart nuevo)
   useEffect(() => {
     playerRef.current?.stop();
     setActiveMeasure(null);
   }, [totalShift]);
 
-  // Cambiar de tema → stop
   useEffect(() => {
     playerRef.current?.stop();
     setShift(0);
     setShowChart(false);
     setIframeOk(true);
     setActiveMeasure(null);
+    setStartMeasure(null);
   }, [song.titulo, song.chart, song.tono]);
 
   useEffect(() => {
@@ -124,8 +122,26 @@ export default function SongSheet({ song, onClose }) {
     } else {
       p.setAst(displayAst);
       p.setBpm(Number(song.bpm) || 120);
-      await p.play();
+      // Retomar pausa sin fromMeasure; partida marcada solo en arranque fresco
+      if (startMeasure != null && !p.paused) {
+        await p.play({ fromMeasure: startMeasure });
+      } else {
+        await p.play();
+      }
     }
+  };
+
+  const handleRestart = async () => {
+    const p = playerRef.current;
+    if (!p || !displayAst) return;
+    p.setAst(displayAst);
+    p.setBpm(Number(song.bpm) || 120);
+    setStartMeasure(null);
+    await p.restart();
+  };
+
+  const handleMeasureSelect = (index) => {
+    setStartMeasure((prev) => (prev === index ? null : index));
   };
 
   const isTransposed = shift !== 0;
@@ -188,16 +204,39 @@ export default function SongSheet({ song, onClose }) {
                     onUp={() => setShift((s) => s + 1)}
                     onReset={() => setShift(0)}
                   />
-                  <button
-                    type="button"
-                    className="be-play-btn"
-                    onClick={togglePlay}
-                    aria-label={playing ? "Pausar chart" : "Reproducir chart"}
-                  >
-                    {playing ? <Pause size={14} /> : <Play size={14} />}
-                    <span>{playing ? "Pausa" : "Play"}</span>
-                  </button>
+                  <div className="be-play-controls">
+                    <button
+                      type="button"
+                      className="be-play-btn"
+                      onClick={togglePlay}
+                      aria-label={playing ? "Pausar chart" : "Reproducir chart"}
+                    >
+                      {playing ? <Pause size={14} /> : <Play size={14} />}
+                      <span>{playing ? "Pausa" : "Play"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="be-play-btn ghost"
+                      onClick={handleRestart}
+                      aria-label="Reiniciar desde el inicio"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Reiniciar</span>
+                    </button>
+                  </div>
                 </div>
+                {startMeasure != null ? (
+                  <p className="be-play-from">
+                    Parte desde compás {startMeasure + 1}
+                    <button type="button" onClick={() => setStartMeasure(null)}>
+                      quitar
+                    </button>
+                  </p>
+                ) : (
+                  <p className="be-play-from">
+                    Tocá un compás para partir desde ahí
+                  </p>
+                )}
                 {warnings.length > 0 ? (
                   <p className="be-chart-warn">
                     Hay {warnings.length} aviso
@@ -205,7 +244,12 @@ export default function SongSheet({ song, onClose }) {
                     compases raros aparecen marcados.
                   </p>
                 ) : null}
-                <Chart ast={displayAst} activeMeasure={activeMeasure} />
+                <Chart
+                  ast={displayAst}
+                  activeMeasure={activeMeasure}
+                  startMeasure={startMeasure}
+                  onMeasureSelect={handleMeasureSelect}
+                />
               </div>
             ) : hasPdf && previewUrl && iframeOk ? (
               <div className="be-chart-pdf">

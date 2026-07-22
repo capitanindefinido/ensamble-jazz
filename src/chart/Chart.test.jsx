@@ -51,4 +51,29 @@ describe("Chart renderer", () => {
       container.querySelector('[data-measure="5"]')?.className
     ).toContain("active");
   });
+
+  it("dibuja N.C. en compases sin acorde", () => {
+    const { ast } = parseChart("T44\n[A] F7 | N.C. | Bb7 |");
+    const { container } = render(<Chart ast={ast} />);
+    const nc = container.querySelector(".be-chart-nc");
+    expect(nc).toBeTruthy();
+    expect(nc.textContent).toBe("N.C.");
+  });
+
+  it("marca .start y notifica onMeasureSelect al tocar", () => {
+    const { ast } = parseChart(EAST_OF_SUN_CHART);
+    const picked = [];
+    const { container } = render(
+      <Chart
+        ast={ast}
+        startMeasure={2}
+        onMeasureSelect={(i) => picked.push(i)}
+      />
+    );
+    expect(
+      container.querySelector('[data-measure="2"]')?.className
+    ).toContain("start");
+    container.querySelector('[data-measure="5"]')?.click();
+    expect(picked).toEqual([5]);
+  });
 });

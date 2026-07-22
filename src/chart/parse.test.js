@@ -39,7 +39,42 @@ describe("parseChord", () => {
     });
     expect(parseChord("Bb6")).toMatchObject({ quality: "maj", ext: ["6"] });
     expect(parseChord("C-")).toMatchObject({ quality: "min", ext: [] });
-    expect(parseChord("G7sus")).toMatchObject({ quality: "sus", ext: ["7"] });
+    expect(parseChord("G7sus")).toMatchObject({ quality: "sus", ext: ["7"], susKind: "" });
+  });
+
+  it("soporta sus, sus2 y sus4 (leading y trailing)", () => {
+    expect(parseChord("B7sus4")).toMatchObject({
+      quality: "sus",
+      ext: ["7"],
+      susKind: "4",
+    });
+    expect(parseChord("Bb7sus2")).toMatchObject({
+      root: { letter: "B", alter: -1 },
+      quality: "sus",
+      ext: ["7"],
+      susKind: "2",
+    });
+    expect(parseChord("Gsus")).toMatchObject({ quality: "sus", ext: [], susKind: "" });
+    expect(parseChord("Gsus4")).toMatchObject({ quality: "sus", ext: [], susKind: "4" });
+  });
+
+  it("roundtrip de G7sus conserva el orden 7sus (no Gsus7)", () => {
+    expect(formatChord(parseChord("G7sus"))).toBe("G7sus");
+    expect(formatChord(parseChord("B7sus4"))).toBe("B7sus4");
+    expect(formatChord(parseChord("Bb7sus2"))).toBe("Bb7sus2");
+    expect(formatChord(parseChord("Gsus4"))).toBe("Gsus4");
+  });
+});
+
+describe("parseChart — N.C.", () => {
+  it("parsea N.C. como compás sin acorde", () => {
+    const { ast, warnings } = parseChart("T44\n[A] F7 | N.C. | Bb7 | N.C. |");
+    expect(warnings).toEqual([]);
+    const ms = ast.sections[0].measures;
+    expect(ms).toHaveLength(4);
+    expect(ms[1].noChord).toBe(true);
+    expect(ms[1].chords).toEqual([]);
+    expect(ms[3].noChord).toBe(true);
   });
 });
 

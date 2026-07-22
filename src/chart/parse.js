@@ -37,7 +37,8 @@ export function parsePitch(token) {
 }
 
 /**
- * @returns {null | { root, quality, ext, bass, raw }}
+ * @returns {null | { root, quality, ext, bass, susKind, raw }}
+ * susKind: "" | "2" | "4" — solo con quality sus (Gsus / Gsus2 / G7sus4).
  */
 export function parseChord(raw) {
   if (!raw || typeof raw !== "string") return null;
@@ -51,6 +52,7 @@ export function parseChord(raw) {
   let i = rootM[0].length;
 
   let quality = null;
+  let susKind = "";
   const after = s0.slice(i);
   if (after.startsWith("^")) {
     quality = QUALITY.maj;
@@ -58,6 +60,10 @@ export function parseChord(raw) {
   } else if (after.startsWith("sus")) {
     quality = QUALITY.sus;
     i += 3;
+    if (after[3] === "2" || after[3] === "4") {
+      susKind = after[3];
+      i += 1;
+    }
   } else if (after.startsWith("-")) {
     quality = QUALITY.min;
     i += 1;
@@ -81,11 +87,12 @@ export function parseChord(raw) {
     body = body.slice(0, slash);
   }
 
-  // G7sus / C7sus4 — sus puede ir después de la tensión
-  let trailingSus = false;
-  if (body.endsWith("sus")) {
-    trailingSus = true;
-    body = body.slice(0, -3);
+  // G7sus / B7sus4 / Bb7sus2 — sus (opcional 2|4) tras la tensión
+  const trailSus = body.match(/sus([24])?$/);
+  if (trailSus) {
+    quality = QUALITY.sus;
+    susKind = trailSus[1] || "";
+    body = body.slice(0, -trailSus[0].length);
   }
 
   const ext = [];
@@ -98,15 +105,20 @@ export function parseChord(raw) {
   }
   if (e !== body.length) return null;
 
-  if (trailingSus) quality = QUALITY.sus;
-
   if (!quality) {
     if (ext.length === 0) quality = QUALITY.maj;
     else if (ext.every((x) => x === "6" || x === "9")) quality = QUALITY.maj;
     else quality = QUALITY.dom;
   }
 
-  return { root, quality, ext, bass, raw: raw.trim() };
+  return {
+    root,
+    quality,
+    ext,
+    bass,
+    susKind: quality === QUALITY.sus ? susKind : "",
+    raw: raw.trim(),
+  };
 }
 
 export function formatPitch(p) {
@@ -137,7 +149,7 @@ export function formatChord(chord) {
       s += "+";
       break;
     case QUALITY.sus:
-      s += "sus";
+      // sus va DESPUÉS de las tensiones: G7sus, no Gsus7
       break;
     case QUALITY.maj: {
       const only69 = chord.ext.length > 0 && chord.ext.every((x) => x === "6" || x === "9");
@@ -151,6 +163,9 @@ export function formatChord(chord) {
   }
 
   s += (chord.ext || []).join("");
+  if (chord.quality === QUALITY.sus) {
+    s += "sus" + (chord.susKind || "");
+  }
   if (chord.bass) s += "/" + formatPitch(chord.bass);
   return s;
 }
@@ -174,6 +189,7 @@ function cloneChord(c) {
     quality: c.quality,
     ext: (c.ext || []).slice(),
     bass: c.bass ? { ...c.bass } : null,
+    susKind: c.susKind || "",
     raw: c.raw,
   };
 }
@@ -244,7 +260,9 @@ function tokenizeLine(line) {
     }
     const word = s.slice(i, j);
     if (word === "%") tokens.push({ type: "repeatPrev" });
-    else if (parseChord(word)) tokens.push({ type: "chord", value: word });
+    else if (word === "N.C." || word === "NC" || word === "n.c." || word === "nc") {
+      tokens.push({ type: "noChord" });
+    } else if (parseChord(word)) tokens.push({ type: "chord", value: word });
     else tokens.push({ type: "unknown", value: word });
     i = j;
   }
@@ -280,6 +298,7 @@ export function parseChart(text) {
   const pushMeasure = ({
     chords = [],
     repeatPrev = false,
+    noChord = false,
     invalid = false,
     raw,
     closeRepeat = false,
@@ -287,9 +306,15 @@ export function parseChart(text) {
     if (!section) ensureSection("");
     const measure = {
       index: measureIndex++,
-      chords: repeatPrev && lastMeasure ? lastMeasure.chords.map(cloneChord) : chords,
+      chords:
+        noChord || (repeatPrev && !lastMeasure)
+          ? []
+          : repeatPrev && lastMeasure
+            ? lastMeasure.chords.map(cloneChord)
+            : chords,
       alternate: pendingAlternate,
       repeatPrev,
+      noChord: !!noChord,
       openRepeat: pendingOpenRepeat,
       closeRepeat,
       ending: pendingEnding,
@@ -320,12 +345,13 @@ export function parseChart(text) {
     let cell = { chords: [], invalid: false, rawParts: [], hasContent: false };
 
     const flush = (extra = {}) => {
-      if (!cell.hasContent && !extra.repeatPrev) return;
+      if (!cell.hasContent && !extra.repeatPrev && !extra.noChord) return;
       pushMeasure({
         chords: cell.chords,
         invalid: cell.invalid,
         raw: cell.rawParts.join(" "),
         repeatPrev: !!extra.repeatPrev,
+        noChord: !!extra.noChord,
         closeRepeat: !!extra.closeRepeat,
       });
       cell = { chords: [], invalid: false, rawParts: [], hasContent: false };
@@ -364,12 +390,14 @@ export function parseChart(text) {
         }
         case "bar":
           flush();
-          // La barra abre/delimita; el próximo contenido es un compás nuevo.
-          // hasContent se setea cuando llega material.
           break;
         case "repeatPrev":
           cell.hasContent = true;
           flush({ repeatPrev: true });
+          break;
+        case "noChord":
+          cell.hasContent = true;
+          flush({ noChord: true });
           break;
         case "chord": {
           cell.hasContent = true;

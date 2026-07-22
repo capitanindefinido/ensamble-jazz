@@ -133,7 +133,15 @@
 .be-play-btn{display:inline-flex; align-items:center; gap:6px; background:var(--paper-ink); color:var(--paper); border:none;
   border-radius:20px; font-family:"Space Mono",monospace; font-size:12px; padding:7px 14px; cursor:pointer;}
 .be-play-btn:hover{opacity:.9;}
+.be-play-btn.ghost{background:transparent; color:var(--paper-ink); border:1.5px solid var(--paper-ink);}
+.be-play-controls{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.be-play-from{font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.06em; color:#8a7a52;}
+.be-play-from button{background:none; border:none; padding:0; margin-left:4px; font:inherit; color:var(--oxblood); cursor:pointer; text-decoration:underline;}
 .be-chart-measure.active{background:rgba(201,162,75,.14); box-shadow:inset 0 0 0 1.5px var(--brass);}
+.be-chart-measure.start{box-shadow:inset 0 0 0 1.5px var(--oxblood);}
+.be-chart-measure.active.start{background:rgba(201,162,75,.14); box-shadow:inset 0 0 0 1.5px var(--oxblood);}
+.be-chart-measure.selectable{cursor:pointer;}
+.be-chart-measure.selectable:hover{background:rgba(154,58,58,.06);}
 .be-transpose-btn{width:32px; height:32px; border-radius:8px; border:1.5px solid var(--paper-ink);
   background:none; color:var(--paper-ink); font-family:"Space Mono",monospace; font-size:18px; line-height:1; cursor:pointer;}
 .be-transpose-btn:hover{background:var(--paper-ink); color:var(--paper);}
@@ -159,6 +167,7 @@
 .be-chart-chords{display:flex; flex-wrap:wrap; gap:6px 8px; align-items:baseline;}
 .be-chart-pct{display:inline-flex; align-items:center; justify-content:center; color:var(--paper-ink); line-height:1;}
 .be-chart-pct-svg{display:block; width:1.15em; height:1.45em;}
+.be-chart-nc{font-family:"Space Mono",monospace; font-size:13px; letter-spacing:.04em; color:#8a7a52;}
 .be-chart-raw{font-family:"Space Mono",monospace; font-size:11px; color:#8a7a52; word-break:break-all;}
 .be-chord{font-family:"Fraunces",Georgia,serif; font-weight:500; font-size:20px; color:var(--paper-ink); line-height:1; white-space:nowrap;}
 .be-chord-root{letter-spacing:-.02em;}

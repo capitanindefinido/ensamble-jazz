@@ -5,7 +5,12 @@ import { formatPitch } from "./parse.js";
  * Renderer del chart sobre el papel.
  * Grid de 4 compases por fila. data-measure={index} para el slice 7.
  */
-export default function Chart({ ast, activeMeasure = null }) {
+export default function Chart({
+  ast,
+  activeMeasure = null,
+  startMeasure = null,
+  onMeasureSelect = null,
+}) {
   const rootRef = useRef(null);
 
   useEffect(() => {
@@ -44,6 +49,12 @@ export default function Chart({ ast, activeMeasure = null }) {
                     key={m.index}
                     measure={m}
                     active={activeMeasure === m.index}
+                    start={startMeasure === m.index}
+                    onSelect={
+                      onMeasureSelect
+                        ? () => onMeasureSelect(m.index)
+                        : null
+                    }
                   />
                 ))}
                 {Array.from({ length: 4 - row.length }).map((_, i) => (
@@ -58,16 +69,37 @@ export default function Chart({ ast, activeMeasure = null }) {
   );
 }
 
-function Measure({ measure: m, active }) {
+function Measure({ measure: m, active, start, onSelect }) {
   const cls =
     "be-chart-measure" +
     (m.invalid ? " invalid" : "") +
     (m.openRepeat ? " open-rep" : "") +
     (m.closeRepeat ? " close-rep" : "") +
-    (active ? " active" : "");
+    (active ? " active" : "") +
+    (start ? " start" : "") +
+    (onSelect ? " selectable" : "");
 
   return (
-    <div className={cls} data-measure={m.index}>
+    <div
+      className={cls}
+      data-measure={m.index}
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      aria-label={
+        onSelect ? `Partir desde compás ${m.index + 1}` : undefined
+      }
+      onClick={onSelect || undefined}
+      onKeyDown={
+        onSelect
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect();
+              }
+            }
+          : undefined
+      }
+    >
       {m.ending ? <span className="be-chart-ending">N{m.ending}</span> : null}
       {m.alternate ? (
         <span className="be-chart-alt">
@@ -98,6 +130,10 @@ function Measure({ measure: m, active }) {
               <circle cx="20" cy="28" r="3.2" fill="currentColor" />
             </svg>
           </span>
+        ) : m.noChord ? (
+          <span className="be-chart-nc" aria-label="sin acorde">
+            N.C.
+          </span>
         ) : m.invalid ? (
           <span className="be-chart-raw">{m.raw || "?"}</span>
         ) : (
@@ -114,7 +150,9 @@ function ChordView({ chord }) {
   const root = formatPitch(chord.root);
   const rootLetter = root[0];
   const rootAlter = root.slice(1);
-  const qualityMark = qualitySymbol(chord.quality, chord.ext);
+  const isSus = chord.quality === "sus";
+  const qualityMark = isSus ? null : qualitySymbol(chord.quality, chord.ext);
+  const susMark = isSus ? `sus${chord.susKind || ""}` : null;
   const ext = (chord.ext || []).join("");
   const bass = chord.bass ? formatPitch(chord.bass) : null;
 
@@ -126,6 +164,7 @@ function ChordView({ chord }) {
       </span>
       {qualityMark ? <span className="be-chord-qual">{qualityMark}</span> : null}
       {ext ? <sup className="be-chord-ext">{prettyAcc(ext)}</sup> : null}
+      {susMark ? <span className="be-chord-qual">{susMark}</span> : null}
       {bass ? (
         <span className="be-chord-bass">
           /{bass[0]}
