@@ -1,0 +1,12 @@
+# Secretos y config local — la variable va en Vercel, no en el bundle subido
+.env
+.env.*
+!.env.example
+
+# Material de trabajo que no forma parte del build
+PLAN.md
+BibliotecaEnsambles.jsx
+east-of-the-sun-chart.jpeg
+plantilla-sheet/
+.cursor/
+dist/

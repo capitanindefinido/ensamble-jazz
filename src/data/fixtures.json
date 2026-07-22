@@ -1,0 +1,134 @@
+{
+  "ensambles": [
+    {
+      "id": "sabado-10",
+      "nombre": "Sábado · 10:00–11:00",
+      "horario": "Sábado 10:00–11:00",
+      "profe_titular": "Diego Montecinos",
+      "profe_ayudante": "Miguel Pérez"
+    }
+  ],
+  "repertorio": [
+    {
+      "ensamble_id": "sabado-10",
+      "orden": 1,
+      "titulo": "Misty",
+      "compositor": "Erroll Garner",
+      "feel": "Ballad Swing",
+      "bpm": 70,
+      "tono": "B♭",
+      "chart": "",
+      "chart_pdf_url": "",
+      "ref_url": "https://www.youtube.com/results?search_query=Misty%20Erroll%20Garner",
+      "notas": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "orden": 2,
+      "titulo": "Take the A Train",
+      "compositor": "Billy Strayhorn",
+      "feel": "Medium Up Swing",
+      "bpm": 160,
+      "tono": "C",
+      "chart": "",
+      "chart_pdf_url": "",
+      "ref_url": "https://www.youtube.com/results?search_query=Take%20the%20A%20Train%20Duke%20Ellington",
+      "notas": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "orden": 3,
+      "titulo": "Route 66",
+      "compositor": "Bobby Troup",
+      "feel": "Medium Up Swing",
+      "bpm": 160,
+      "tono": "F",
+      "chart": "",
+      "chart_pdf_url": "",
+      "ref_url": "https://www.youtube.com/results?search_query=Route%2066%20Nat%20King%20Cole",
+      "notas": "Con breaks — ojo con los cortes antes de cada frase."
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "orden": 4,
+      "titulo": "All of Me",
+      "compositor": "Gerald Marks",
+      "feel": "Medium Swing",
+      "bpm": 120,
+      "tono": "G",
+      "chart": "",
+      "chart_pdf_url": "",
+      "ref_url": "https://www.youtube.com/results?search_query=All%20of%20Me%20jazz%20standard",
+      "notas": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "orden": 5,
+      "titulo": "East of the Sun",
+      "compositor": "Brooks Bowman",
+      "feel": "Swing Two/Four",
+      "bpm": 132,
+      "tono": "B♭",
+      "chart": "T44\n[A] Bb^7 | (Eb7) % | D-7 | G7 |\n    C-7 | % | Eb-7 | Ab7 |\n[B] C-7 | F7 | Ah7 D7b13 | G-7 |\n    G-7 | C7 | C-7 | F7 |\n[A] Bb^7 | (Eb7) % | D-7 | G7 |\n    C-7 | % | Eb-7 | Ab7 |\n[C] C- C-7/Bb | Ah7 D7b9 | G-7 | C7 |\n    C-7 | Ab7 | D-7 | Db-7 Gb7 |\n    C-7 | F7 | Bb6 | % |",
+      "chart_pdf_url": "",
+      "ref_url": "https://www.youtube.com/results?search_query=East%20of%20the%20Sun%20Stan%20Getz",
+      "notas": ""
+    }
+  ],
+  "integrantes": [
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Diego Montecinos",
+      "rol": "titular",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Miguel Pérez",
+      "rol": "ayudante",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Diego",
+      "rol": "musico",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Juan Pablo Andrade",
+      "rol": "musico",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Roberto",
+      "rol": "musico",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Caroline",
+      "rol": "musico",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Francesca",
+      "rol": "musico",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Pablo S.",
+      "rol": "musico",
+      "instrumento": ""
+    },
+    {
+      "ensamble_id": "sabado-10",
+      "nombre": "Vicente C.",
+      "rol": "musico",
+      "instrumento": ""
+    }
+  ]
+}
