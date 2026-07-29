@@ -206,11 +206,11 @@
 .be-chart-measure.close-rep::after{content:"𝄇"; position:absolute; right:2px; top:2px; font-size:12px; color:#8a7a52;}
 .be-chart-ending{position:absolute; top:2px; left:4px; font-family:"Space Mono",monospace; font-size:9px; color:#8a7a52;}
 .be-chart-alt{position:absolute; top:2px; right:4px; left:auto; font-size:11px; color:#8a7a52; transform:scale(.85); transform-origin:top right;}
-.be-chart-chords{display:flex; flex-wrap:nowrap; gap:4px 8px; align-items:baseline;
+.be-chart-chords{display:flex; flex-wrap:nowrap; gap:0; align-items:baseline;
   justify-content:flex-start; width:100%; min-width:0;}
-.be-chart-chords.n2,
-.be-chart-chords.n3,
-.be-chart-chords.n4{justify-content:space-between; gap:0;}
+.be-chart-chords.n2 .be-chord,
+.be-chart-chords.n3 .be-chord,
+.be-chart-chords.n4 .be-chord{flex:1 1 0; min-width:0; text-align:left;}
 .be-chart-chords.n3 .be-chord{font-size:16px;}
 .be-chart-chords.n4 .be-chord{font-size:15px;}
 .be-chart-pct{display:inline-flex; align-items:center; justify-content:center; color:var(--paper-ink); line-height:1;}
