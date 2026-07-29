@@ -24,9 +24,11 @@ export function cleanTitle(title) {
     .trim();
 }
 
-/** "Strayhorn Billy" → "Billy Strayhorn" */
+/** "Strayhorn Billy" → "Billy Strayhorn"; ". ." / vacío → "" */
 export function flipComposer(composer) {
-  const parts = String(composer || "").trim().split(/\s+/).filter(Boolean);
+  const raw = String(composer || "").trim();
+  if (!raw || /^[.\s]+$/.test(raw)) return "";
+  const parts = raw.split(/\s+/).filter(Boolean);
   if (parts.length < 2) return parts.join(" ");
   const last = parts[0];
   const first = parts.slice(1).join(" ");

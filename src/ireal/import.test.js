@@ -175,4 +175,13 @@ describe("translateIrealBody — East en G (sin HTML)", () => {
     expect(error).toMatch(/tokens no traducibles/);
     expect(error).toContain("@");
   });
+
+  it("acepta sección Intro *i en minúscula", () => {
+    const { chartText, error } = translateIrealBody(
+      "[*iT44F^XyQ|C-7 F7LZBbXyQZ"
+    );
+    expect(error).toBeNull();
+    expect(chartText).toMatch(/\[Intro\]/);
+    expect(chartText).toMatch(/F\^/);
+  });
 });

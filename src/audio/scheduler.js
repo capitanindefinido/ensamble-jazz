@@ -7,7 +7,15 @@
 export const LOOKAHEAD_MS = 25;
 export const SCHEDULE_AHEAD_SEC = 0.1;
 
+/** Defaults de mezcla: click más bajo, armonía más presente. */
+export const DEFAULT_CLICK_VOLUME = 0.4;
+export const DEFAULT_HARMONY_VOLUME = 0.9;
+
 let sharedCtx = null;
+let clickBus = null;
+let harmonyBus = null;
+let clickVolume = DEFAULT_CLICK_VOLUME;
+let harmonyVolume = DEFAULT_HARMONY_VOLUME;
 
 export function getSharedAudioContext() {
   if (typeof window === "undefined") return null;
@@ -16,6 +24,52 @@ export function getSharedAudioContext() {
     sharedCtx = new AC();
   }
   return sharedCtx;
+}
+
+function ensureBuses(ctx) {
+  if (!ctx) return;
+  if (!clickBus || clickBus.context !== ctx) {
+    clickBus = ctx.createGain();
+    clickBus.gain.value = clickVolume;
+    clickBus.connect(ctx.destination);
+  }
+  if (!harmonyBus || harmonyBus.context !== ctx) {
+    harmonyBus = ctx.createGain();
+    harmonyBus.gain.value = harmonyVolume;
+    harmonyBus.connect(ctx.destination);
+  }
+}
+
+/** Bus de clicks (metrónomo + player). */
+export function getClickBus(ctx) {
+  ensureBuses(ctx);
+  return clickBus;
+}
+
+/** Bus de bajo/voicing. */
+export function getHarmonyBus(ctx) {
+  ensureBuses(ctx);
+  return harmonyBus;
+}
+
+/** @param {number} v 0..1 */
+export function setClickVolume(v) {
+  clickVolume = Math.max(0, Math.min(1, Number(v) || 0));
+  if (clickBus) clickBus.gain.value = clickVolume;
+}
+
+/** @param {number} v 0..1 */
+export function setHarmonyVolume(v) {
+  harmonyVolume = Math.max(0, Math.min(1, Number(v) || 0));
+  if (harmonyBus) harmonyBus.gain.value = harmonyVolume;
+}
+
+export function getClickVolume() {
+  return clickVolume;
+}
+
+export function getHarmonyVolume() {
+  return harmonyVolume;
 }
 
 export async function resumeAudioContext() {
@@ -32,6 +86,7 @@ export async function resumeAudioContext() {
 export async function unlockAudio() {
   const ctx = await resumeAudioContext();
   if (!ctx) return null;
+  ensureBuses(ctx);
   try {
     const buffer = ctx.createBuffer(1, 1, ctx.sampleRate || 22050);
     const src = ctx.createBufferSource();
@@ -68,8 +123,6 @@ export class LookaheadScheduler {
    *   scheduleAheadSec: number,
    *   scheduleVisual: (when: number, fn: () => void) => void
    * }) => void} scheduleFn
-   * Se llama en cada tick; debe agendar eventos con t < now + scheduleAheadSec
-   * y avanzar su propio cursor.
    */
   start(scheduleFn) {
     this.stop();
@@ -118,12 +171,12 @@ export class LookaheadScheduler {
   }
 }
 
-/** Click de metrónomo / player. */
+/** Click de metrónomo / player → bus de click. */
 export function playClick(ctx, time, isDownbeat) {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(getClickBus(ctx));
 
   osc.frequency.setValueAtTime(isDownbeat ? 1000 : 800, time);
   osc.type = "square";

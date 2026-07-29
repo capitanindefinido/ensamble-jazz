@@ -8,6 +8,7 @@ import {
   LookaheadScheduler,
   playClick,
   unlockAudio,
+  getHarmonyBus,
 } from "./scheduler.js";
 
 /** Intervalos (semitonos desde la raíz) por calidad del parser. */
@@ -108,7 +109,7 @@ function playTone(ctx, time, freq, { duration = 0.18, peak = 0.12, type = "trian
   osc.type = type;
   osc.frequency.setValueAtTime(freq, time);
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(getHarmonyBus(ctx));
   gain.gain.setValueAtTime(0.0001, time);
   gain.gain.exponentialRampToValueAtTime(peak, time + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
@@ -119,8 +120,8 @@ function playTone(ctx, time, freq, { duration = 0.18, peak = 0.12, type = "trian
 function playBass(ctx, time, midi) {
   if (midi == null) return;
   playTone(ctx, time, freqFromMidi(midi), {
-    duration: 0.28,
-    peak: 0.16,
+    duration: 0.32,
+    peak: 0.2,
     type: "sine",
   });
 }
@@ -128,15 +129,14 @@ function playBass(ctx, time, midi) {
 function playVoicing(ctx, time, chord) {
   const v = voicingMidis(chord);
   if (!v) return;
-  // Bien por debajo del bajo
   playTone(ctx, time, freqFromMidi(v.third), {
-    duration: 0.35,
-    peak: 0.035,
+    duration: 0.4,
+    peak: 0.09,
     type: "triangle",
   });
   playTone(ctx, time, freqFromMidi(v.seventh), {
-    duration: 0.35,
-    peak: 0.028,
+    duration: 0.4,
+    peak: 0.075,
     type: "triangle",
   });
 }

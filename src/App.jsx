@@ -6,16 +6,26 @@ import RepertorioList from "./components/RepertorioList.jsx";
 import Roster from "./components/Roster.jsx";
 import SongSheet from "./components/SongSheet.jsx";
 import EnsemblePicker from "./components/EnsemblePicker.jsx";
+import EnsembleQr from "./components/EnsembleQr.jsx";
+import ChartEditor from "./components/ChartEditor.jsx";
+
+function parseHashRoute() {
+  const raw = window.location.hash || "";
+  if (raw === "#/editor" || raw.startsWith("#/editor?")) {
+    return { type: "editor" };
+  }
+  const m = raw.match(/^#\/ensamble\/([^/?#]+)/);
+  if (!m) return { type: "home" };
+  try {
+    return { type: "ensamble", id: decodeURIComponent(m[1]) };
+  } catch {
+    return { type: "ensamble", id: m[1] };
+  }
+}
 
 function parseEnsambleHash() {
-  const raw = window.location.hash || "";
-  const m = raw.match(/^#\/ensamble\/([^/?#]+)/);
-  if (!m) return null;
-  try {
-    return decodeURIComponent(m[1]);
-  } catch {
-    return m[1];
-  }
+  const r = parseHashRoute();
+  return r.type === "ensamble" ? r.id : null;
 }
 
 function ensambleHash(id) {
@@ -34,6 +44,9 @@ export default function App() {
 
   const [hashId, setHashId] = useState(() =>
     typeof window !== "undefined" ? parseEnsambleHash() : null
+  );
+  const [route, setRoute] = useState(() =>
+    typeof window !== "undefined" ? parseHashRoute().type : "home"
   );
 
   useEffect(() => {
@@ -66,7 +79,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const onHash = () => setHashId(parseEnsambleHash());
+    const onHash = () => {
+      const r = parseHashRoute();
+      setRoute(r.type);
+      setHashId(r.type === "ensamble" ? r.id : parseEnsambleHash());
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -76,6 +93,7 @@ export default function App() {
   // Sin hash → primer ensamble (replaceState para no ensuciar el historial)
   useEffect(() => {
     if (status !== "ready" || !ensambles.length) return;
+    if (route === "editor") return;
     if (hashId) return;
     const first = ensambles[0];
     if (!first?.id) return;
@@ -83,8 +101,9 @@ export default function App() {
     if (window.location.hash !== next) {
       window.history.replaceState(null, "", next);
       setHashId(first.id);
+      setRoute("ensamble");
     }
-  }, [status, ensambles, hashId]);
+  }, [status, ensambles, hashId, route]);
 
   const selectedId = hashId;
   const ensambleExists =
@@ -129,6 +148,19 @@ export default function App() {
           <div className="be-msg">Cargando el repertorio…</div>
         </div>
       </div>
+    );
+  }
+
+  if (route === "editor") {
+    return (
+      <ChartEditor
+        bundle={bundle}
+        ensambles={ensambles}
+        onBack={() => {
+          const id = ensambles[0]?.id;
+          window.location.hash = id ? ensambleHash(id) : "#/";
+        }}
+      />
     );
   }
 
@@ -322,11 +354,37 @@ export default function App() {
 
         <footer className="be-foot">
           <span>Club de Jazz de Santiago · Casa Maroto</span>
+          {ensamble ? (
+            <EnsembleQr
+              ensambleId={ensamble.id}
+              ensambleNombre={ensamble.nombre}
+            />
+          ) : null}
           <span className="be-foot-credit">prototipo v0 · hecho por Diego</span>
         </footer>
       </div>
 
-      {open && <SongSheet song={open} onClose={() => setOpen(null)} />}
+      {open && (
+        <SongSheet
+          song={open}
+          onClose={() => setOpen(null)}
+          onSongUpdate={(updated) => {
+            setOpen(updated);
+            setBundle((prev) => {
+              if (!prev?.repertorio) return prev;
+              return {
+                ...prev,
+                repertorio: prev.repertorio.map((s) =>
+                  s.ensamble_id === updated.ensamble_id &&
+                  s.titulo === updated.titulo
+                    ? { ...s, ...updated }
+                    : s
+                ),
+              };
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

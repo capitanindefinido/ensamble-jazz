@@ -40,7 +40,11 @@ function cloneMeasure(m) {
   };
 }
 
-/** Limpia el interior de <...> para la columna notas. */
+const SECTION_LABELS = { i: "Intro", I: "Intro", v: "Verse", V: "Verse" };
+
+function sectionLabel(letter) {
+  return SECTION_LABELS[letter] || letter;
+}
 export function cleanAnnotation(inner) {
   return String(inner || "")
     .replace(/^\*+\d*\s*/, "")
@@ -82,13 +86,14 @@ export function translateIrealBody(raw) {
     }
   }
 
-  function flushMeasure() {
+  function flushMeasure({ forSection = false } = {}) {
     if (!section) ensureSection("");
     if (!hasContent(measure) && !measure.openRepeat && !measure.closeRepeat) {
       measure = emptyMeasure();
       return;
     }
-    if (openRepeatPending) {
+    // `{*A` pone `{` antes de la sección: no colgar el open-repeat en el compás previo
+    if (openRepeatPending && !forSection) {
       measure.openRepeat = true;
       openRepeatPending = false;
     }
@@ -149,11 +154,11 @@ export function translateIrealBody(raw) {
       continue;
     }
 
-    // *A[ / *A{ / *AT44 — no confundir con tipografía *7sus4*
-    const secMatch = s.slice(i).match(/^\*([A-Z0-9])(?![a-z])([\[{])?/);
+    // *A[ / *iT44 / *AT44 — minúsculas (Intro=*i) y mayúsculas
+    const secMatch = s.slice(i).match(/^\*([A-Za-z0-9])(?![a-z])([\[{])?/);
     if (secMatch) {
-      flushMeasure();
-      ensureSection(secMatch[1]);
+      flushMeasure({ forSection: true });
+      ensureSection(sectionLabel(secMatch[1]));
       if (secMatch[2] === "{") openRepeatPending = true;
       i += secMatch[0].length;
       continue;
@@ -257,10 +262,10 @@ export function translateIrealBody(raw) {
         s[j] !== "Q" &&
         s[j] !== ","
       ) {
-        if (s[j] === "*" && /[A-Z0-9]/.test(s[j + 1] || "")) {
-          const look = s.slice(j).match(/^\*([A-Z0-9])(?![a-z])/);
-          // sección *A[ — no tipografía *7
-          if (look && /[A-Z]/.test(look[1]) && !/\d/.test(look[1])) break;
+        if (s[j] === "*" && /[A-Za-z0-9]/.test(s[j + 1] || "")) {
+          const look = s.slice(j).match(/^\*([A-Za-z0-9])(?![a-z])/);
+          // sección *A[ / *i — no tipografía *7
+          if (look && /[A-Za-z]/.test(look[1]) && !/\d/.test(look[1])) break;
         }
         j += 1;
       }
