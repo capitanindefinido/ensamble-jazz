@@ -64,6 +64,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
 
   const playerRef = useRef(null);
   const paperRef = useRef(null);
+  const guideRef = useRef(null);
   const wakeLockRef = useRef(null);
 
   const hasChart = Boolean(song.chart && String(song.chart).trim());
@@ -102,6 +103,11 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
     if (!showGuide || !displayAst) return null;
     return guideForActiveMeasure(displayAst, activeMeasure, startMeasure);
   }, [showGuide, displayAst, activeMeasure, startMeasure]);
+
+  useEffect(() => {
+    if (!showGuide || !guideRef.current) return;
+    guideRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [showGuide]);
 
   useEffect(() => {
     const player = new ChartPlayer({
@@ -421,7 +427,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                       aria-pressed={showGuide}
                     >
                       <Lightbulb size={14} />
-                      <span>Ayuda</span>
+                      <span>{showGuide ? "Ocultar ayuda" : "Ayuda"}</span>
                     </button>
                     <button
                       type="button"
@@ -455,6 +461,11 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                     Toca un compás para partir desde ahí
                   </p>
                 )}
+                {showGuide ? (
+                  <div ref={guideRef}>
+                    <ImprovGuide guide={improvGuide} />
+                  </div>
+                ) : null}
                 {warnings.length > 0 ? (
                   <p className="be-chart-warn">
                     Hay {warnings.length} aviso
@@ -468,7 +479,6 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                   startMeasure={startMeasure}
                   onMeasureSelect={handleMeasureSelect}
                 />
-                {showGuide ? <ImprovGuide guide={improvGuide} /> : null}
               </div>
             ) : hasPdf && previewUrl && iframeOk ? (
               <div className="be-chart-pdf">

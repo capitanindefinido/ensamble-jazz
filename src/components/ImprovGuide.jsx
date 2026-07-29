@@ -6,7 +6,7 @@ export default function ImprovGuide({ guide }) {
     return (
       <div className="be-improv no-print">
         <p className="be-improv-empty">
-          Toca un compás del chart para ver escalas y voicings.
+          No hay acordes en este compás. Elige otro o reproduce el chart.
         </p>
       </div>
     );
