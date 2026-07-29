@@ -195,12 +195,15 @@
 .be-chart-alt{position:absolute; top:2px; right:4px; left:auto; font-size:11px; color:#8a7a52; transform:scale(.85); transform-origin:top right;}
 .be-chart-chords{display:flex; flex-wrap:nowrap; gap:4px 8px; align-items:baseline;
   justify-content:flex-start; width:100%; min-width:0;}
+.be-chart-chords.n2{justify-content:space-between; gap:0;}
 .be-chart-chords.n3,
 .be-chart-chords.n4{justify-content:space-around; gap:0;}
 .be-chart-chords.n3 .be-chord{font-size:15px;}
 .be-chart-chords.n4 .be-chord{font-size:13px;}
-/* 2 acordes: repartir a izquierda/derecha del compás */
-.be-chart-chords:has(.be-chord:nth-child(2):last-child){justify-content:space-between;}
+.be-chart-pct{display:inline-flex; align-items:center; justify-content:center; color:var(--paper-ink); line-height:1;}
+.be-chart-pct-svg{display:block; width:1.15em; height:1.45em;}
+.be-chart-nc{font-family:"Space Mono",monospace; font-size:13px; letter-spacing:.04em; color:#8a7a52;}
+.be-chart-raw{font-family:"Space Mono",monospace; font-size:11px; color:#8a7a52; word-break:break-all;}
 .be-chord{font-family:"Fraunces",Georgia,serif; font-weight:500; font-size:20px; color:var(--paper-ink); line-height:1; white-space:nowrap; flex:0 0 auto;}
 .be-chord-root{letter-spacing:-.02em;}
 .be-readout-key .be-chord-root{font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:30px; color:var(--oxblood);}

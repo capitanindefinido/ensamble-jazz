@@ -113,7 +113,9 @@ function Measure({ measure: m, active, start, onSelect }) {
             ? " n4"
             : m.chords?.length === 3
               ? " n3"
-              : "")
+              : m.chords?.length === 2
+                ? " n2"
+                : "")
         }
       >
         {m.repeatPrev ? (
