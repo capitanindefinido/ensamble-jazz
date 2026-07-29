@@ -78,6 +78,22 @@ export default function App() {
     };
   }, []);
 
+  const refreshLibrary = async () => {
+    try {
+      const result = await loadLibrary();
+      setBundle(result.data);
+      setMeta(result);
+      if (result.data?.ensambles?.length || result.data?.repertorio?.length) {
+        setStatus("ready");
+        setError(null);
+      }
+      return result;
+    } catch (err) {
+      setError(err);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const onHash = () => {
       const r = parseHashRoute();
@@ -156,6 +172,7 @@ export default function App() {
       <ChartEditor
         bundle={bundle}
         ensambles={ensambles}
+        onLibraryRefresh={refreshLibrary}
         onBack={() => {
           const id = ensambles[0]?.id;
           window.location.hash = id ? ensambleHash(id) : "#/";

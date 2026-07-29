@@ -5,12 +5,9 @@
  *   [5] tono tocado (pc)  [6] cuerpo scrambled  [7] feel  [8] bpm
  */
 
-import { createRequire } from "node:module";
 import { parseKeyString, formatKey } from "../chart/parse.js";
 import { pitchClass } from "../chart/transpose.js";
-
-const require = createRequire(import.meta.url);
-const unscramble = require("ireal-reader/unscramble.js");
+import { ireal as unscrambleIreal } from "./unscramble.js";
 
 const MUSIC_PREFIX = "1r34LbKcu7";
 const PROTOCOL_RE = /irealb:\/\/([^"'\s]+)/i;
@@ -113,7 +110,7 @@ export function parseIrealPlaylist(htmlOrUrl) {
     const headFields = part.slice(0, musicIdx).split("=");
     const afterFields = part.slice(musicIdx + MUSIC_PREFIX.length).split("=");
     const scrambled = afterFields[0] || "";
-    const bodyRaw = unscramble.ireal(scrambled);
+    const bodyRaw = unscrambleIreal(scrambled);
 
     const titleRaw = headFields[0] ?? "";
     const composerRaw = headFields[1] ?? "";

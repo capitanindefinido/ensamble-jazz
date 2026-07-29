@@ -13,6 +13,7 @@ import {
   chordRaws,
   deltaToKey,
   preferKeySpelling,
+  spellPitchClass,
   transposeAst,
   transposePitch,
 } from "./transpose.js";
@@ -168,6 +169,21 @@ describe("transpose", () => {
       transposePitch({ letter: "C", alter: 0 }, 1, true)
     );
     expect(formatPitch(p)).toBe("Db");
+  });
+
+  it("no usa E# (prefiere F) al deletrear pc 5", () => {
+    const eMaj = parseKeyString("E");
+    const fSharp = parseKeyString("F#");
+    expect(formatPitch(spellPitchClass(5, eMaj))).toBe("F");
+    expect(formatPitch(spellPitchClass(5, fSharp))).toBe("F");
+  });
+
+  it("no usa B# / Fb / Cb", () => {
+    const c = parseKeyString("C");
+    const gs = parseKeyString("G#");
+    expect(formatPitch(spellPitchClass(0, gs))).toBe("C"); // no B#
+    expect(formatPitch(spellPitchClass(4, c))).toBe("E"); // no Fb
+    expect(formatPitch(spellPitchClass(11, c))).toBe("B"); // no Cb
   });
 
   it("subir Bb→C y bajar C→Bb vuelve a los mismos acordes", () => {

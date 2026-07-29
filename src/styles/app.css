@@ -272,11 +272,18 @@
   color:var(--muted); font-family:"Space Mono",monospace; font-size:11px; letter-spacing:.06em;
   text-transform:uppercase; cursor:pointer; padding:0; margin-bottom:8px;}
 .be-editor-back:hover{color:var(--brass);}
+.be-editor-section-title{font-family:"Fraunces",Georgia,serif; font-size:18px; font-weight:600;
+  margin:0 0 8px; color:var(--text);}
+.be-editor-import{margin-bottom:8px;}
+.be-editor-sep{border:none; border-top:1px solid var(--line); margin:20px 0;}
+.be-editor-file-name{font-size:11px; letter-spacing:0; text-transform:none; color:var(--brass); margin-top:4px;}
+.be-editor-ta-sm{min-height:88px;}
 .be-editor-field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;
   font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
 .be-editor-field select, .be-editor-field input, .be-editor-ta{
   font-family:"Space Mono",monospace; font-size:13px; letter-spacing:0; text-transform:none;
   background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px;}
+.be-editor-field input[type="file"]{padding:8px; font-size:12px;}
 .be-editor-ta{resize:vertical; line-height:1.45; min-height:160px;}
 .be-editor-palette{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px;}
 .be-editor-chip{background:var(--panel); border:1px solid var(--line); color:var(--text);

@@ -4,17 +4,19 @@
  * Uso: npm run import-ireal -- ~/Downloads/Ensamble.html
  *      npm run import-ireal -- ~/Downloads/Ensamble.html --ensamble sabado-10
  *
- * No escribe al Google Sheet (eso es slice 6).
+ * No escribe al Google Sheet (usar #/editor en la app).
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import Papa from "papaparse";
-import { parseChart, parseKeyString } from "../src/chart/parse.js";
-import { transposeAst, serializeAst } from "../src/chart/transpose.js";
-import { parseIrealPlaylist, resolvePlayedKey } from "../src/ireal/playlist.js";
-import { translateIrealBody } from "../src/ireal/translate.js";
+import {
+  findRowIndex,
+  importSongsFromHtml,
+  matchKey,
+  normTitle,
+} from "../src/ireal/importSongs.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
@@ -36,7 +38,12 @@ const HEADERS = [
 ];
 
 function parseArgs(argv) {
-  const args = { htmlPath: null, ensambleId: "sabado-10", csvPath: DEFAULT_CSV, tsvPath: DEFAULT_TSV };
+  const args = {
+    htmlPath: null,
+    ensambleId: "sabado-10",
+    csvPath: DEFAULT_CSV,
+    tsvPath: DEFAULT_TSV,
+  };
   const rest = [];
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -50,34 +57,6 @@ function parseArgs(argv) {
   }
   args.htmlPath = rest[0] ? resolve(rest[0]) : null;
   return args;
-}
-
-function normTitle(t) {
-  return String(t || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-/** Clave corta sin sufijos entre paréntesis / "with breaks" para matching. */
-function matchKey(t) {
-  return normTitle(String(t || "").replace(/\([^)]*\)/g, " "));
-}
-
-function findRowIndex(byTitle, title) {
-  const full = normTitle(title);
-  if (byTitle.has(full)) return byTitle.get(full);
-  const short = matchKey(title);
-  if (short && byTitle.has(short)) return byTitle.get(short);
-  // Sheet "Route 66" ↔ iReal "Route 66 (with breaks)"
-  for (const [k, idx] of byTitle) {
-    if (k === short || k.startsWith(short + " ") || short.startsWith(k + " ")) {
-      return idx;
-    }
-  }
-  return null;
 }
 
 function emptyRow(ensambleId, orden) {
@@ -126,49 +105,12 @@ function writeTsv(path, rows) {
   writeFileSync(path, `${lines.join("\n")}\n`, "utf8");
 }
 
-function importSong(song) {
-  if (!song.ok) return { skip: true, title: song.title, reason: song.error };
-
-  const translated = translateIrealBody(song.bodyRaw);
-  if (translated.error) {
-    return { skip: true, title: song.title, reason: translated.error };
-  }
-
-  const keyInfo = resolvePlayedKey(song.storedKey, song.transposePc);
-  if (keyInfo.error) {
-    return { skip: true, title: song.title, reason: keyInfo.error };
-  }
-
-  const { ast } = parseChart(translated.chartText);
-
-  let chartText = translated.chartText;
-  if (keyInfo.delta !== 0) {
-    const dest = keyInfo.playedPitch;
-    chartText = serializeAst(transposeAst(ast, keyInfo.delta, dest));
-  }
-  // Una sola línea: pegable en Sheet y compatible con el CSV plantilla
-  chartText = chartText.replace(/\r?\n/g, " ").replace(/  +/g, " ").trim();
-
-  const notesText = (translated.notes || []).filter(Boolean).join("; ");
-
-  return {
-    skip: false,
-    title: song.title,
-    composer: song.composer,
-    feel: song.feel,
-    bpmExport: song.bpmExport,
-    tono: keyInfo.tono,
-    chart: chartText,
-    notesText,
-    storedKey: song.storedKey,
-    delta: keyInfo.delta,
-  };
-}
-
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.htmlPath) {
-    console.error("Uso: npm run import-ireal -- <archivo.html> [--ensamble sabado-10]");
+    console.error(
+      "Uso: npm run import-ireal -- <archivo.html> [--ensamble sabado-10]"
+    );
     process.exit(1);
   }
 
@@ -180,14 +122,14 @@ function main() {
     process.exit(1);
   }
 
-  const playlist = parseIrealPlaylist(html);
-  if (playlist.error) {
-    console.error(playlist.error);
+  const imported = importSongsFromHtml(html);
+  if (imported.error) {
+    console.error(imported.error);
     process.exit(1);
   }
 
   console.log(
-    `Playlist: ${playlist.playlistName || "(sin nombre)"} — ${playlist.songs.length} tema(s)`
+    `Playlist: ${imported.playlistName || "(sin nombre)"} — ${imported.songs.length + imported.skipped.length} tema(s)`
   );
 
   const rows = loadCsv(args.csvPath);
@@ -206,43 +148,33 @@ function main() {
     if (Number.isFinite(n) && n > maxOrden) maxOrden = n;
   }
 
-  const skipped = [];
   const bpmConflicts = [];
   const notesConflicts = [];
-  const imported = [];
+  const done = [];
 
-  for (const song of playlist.songs) {
-    const result = importSong(song);
-    if (result.skip) {
-      skipped.push({ title: result.title, reason: result.reason });
-      continue;
-    }
-
-    let idx = findRowIndex(byTitle, result.title);
+  for (const result of imported.songs) {
+    let idx = findRowIndex(byTitle, result.titulo);
     let row;
     if (idx == null) {
       maxOrden += 1;
       row = emptyRow(args.ensambleId, maxOrden);
       rows.push(row);
       idx = rows.length - 1;
-      byTitle.set(normTitle(result.title), idx);
-      const short = matchKey(result.title);
+      byTitle.set(normTitle(result.titulo), idx);
+      const short = matchKey(result.titulo);
       if (short) byTitle.set(short, idx);
     } else {
       row = rows[idx];
     }
 
     const prevBpm = String(row.bpm ?? "").trim();
-    const exportBpm =
-      result.bpmExport != null && Number.isFinite(result.bpmExport)
-        ? String(result.bpmExport)
-        : "";
+    const exportBpm = String(result.bpm ?? "").trim();
 
     if (prevBpm === "" && exportBpm !== "") {
       row.bpm = exportBpm;
     } else if (prevBpm !== "" && exportBpm !== "" && prevBpm !== exportBpm) {
       bpmConflicts.push({
-        title: result.title,
+        title: result.titulo,
         sheet: prevBpm,
         export: exportBpm,
       });
@@ -255,7 +187,7 @@ function main() {
         row.notas = exportNotas;
       } else if (prevNotas !== exportNotas) {
         notesConflicts.push({
-          title: result.title,
+          title: result.titulo,
           sheet: prevNotas,
           export: exportNotas,
         });
@@ -263,26 +195,26 @@ function main() {
     }
 
     row.ensamble_id = args.ensambleId;
-    if (!String(row.titulo || "").trim()) row.titulo = result.title;
-    row.compositor = result.composer;
+    if (!String(row.titulo || "").trim()) row.titulo = result.titulo;
+    row.compositor = result.compositor;
     row.feel = result.feel;
     row.tono = result.tono;
     row.chart = result.chart;
     if (!row.ref_url) {
-      const q = encodeURIComponent(`${result.title} ${result.composer}`);
+      const q = encodeURIComponent(`${result.titulo} ${result.compositor}`);
       row.ref_url = `https://www.youtube.com/results?search_query=${q}`;
     }
 
-    imported.push(result);
+    done.push(result);
   }
 
   writeCsv(args.csvPath, rows);
   writeTsv(args.tsvPath, rows.filter((r) => r.ensamble_id === args.ensambleId));
 
-  console.log(`\nImportados: ${imported.length}`);
-  for (const s of imported) {
+  console.log(`\nImportados: ${done.length}`);
+  for (const s of done) {
     console.log(
-      `  ✓ ${s.title}  (${s.storedKey} → ${s.tono}${s.delta ? ` Δ${s.delta}` : ""})`
+      `  ✓ ${s.titulo}  (${s.storedKey} → ${s.tono}${s.delta ? ` Δ${s.delta}` : ""})`
     );
   }
 
@@ -300,9 +232,9 @@ function main() {
     }
   }
 
-  if (skipped.length) {
+  if (imported.skipped.length) {
     console.log("\nOmitidos:");
-    for (const s of skipped) {
+    for (const s of imported.skipped) {
       console.log(`  ✗ ${s.title}: ${s.reason}`);
     }
   }

@@ -134,6 +134,9 @@ export function spellPitchClass(pc, destKey) {
     let s = 0;
     if (Math.abs(p.alter) >= 2) s += 100;
     s += Math.abs(p.alter) * 10;
+    // Jazz charts: preferir F/C/B/E sobre E#/B#/Fb/Cb
+    const name = `${p.letter}${p.alter === 1 ? "#" : p.alter === -1 ? "b" : p.alter === 2 ? "##" : p.alter === -2 ? "bb" : ""}`;
+    if (name === "E#" || name === "B#" || name === "Fb" || name === "Cb") s += 80;
     const expected = keyAlterForLetter(key, p.letter);
     if (p.alter === expected) s -= 8; // pertenece a la armadura (o natural en ella)
     else s += 4;
