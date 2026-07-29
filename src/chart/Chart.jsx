@@ -206,10 +206,15 @@ export function KeyDisplay({ pitch, fallback }) {
 
 function qualitySymbol(q, ext) {
   switch (q) {
-    case "maj":
-      // maj7 / maj9 → △
-      if ((ext || []).some((e) => /^(7|9|11|13)$/.test(e))) return "△";
+    case "maj": {
+      const xs = ext || [];
+      // G69 / G6 / G9 → sin △ (acordes add6/add9); maj7/maj9 → △
+      const only69 =
+        xs.length > 0 && xs.every((e) => e === "6" || e === "9");
+      if (only69) return null;
+      if (xs.some((e) => /^(7|9|11|13)$/.test(e))) return "△";
       return null;
+    }
     case "min":
       return "−";
     case "halfdim":

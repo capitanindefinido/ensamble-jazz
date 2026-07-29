@@ -206,18 +206,21 @@
 .be-chart-measure.close-rep::after{content:"𝄇"; position:absolute; right:2px; top:2px; font-size:12px; color:#8a7a52;}
 .be-chart-ending{position:absolute; top:2px; left:4px; font-family:"Space Mono",monospace; font-size:9px; color:#8a7a52;}
 .be-chart-alt{position:absolute; top:2px; right:4px; left:auto; font-size:11px; color:#8a7a52; transform:scale(.85); transform-origin:top right;}
-.be-chart-chords{display:flex; flex-wrap:nowrap; gap:0; align-items:baseline;
+.be-chart-chords{display:flex; flex-wrap:nowrap; gap:0 6px; align-items:baseline;
   justify-content:flex-start; width:100%; min-width:0;}
 .be-chart-chords.n2 .be-chord,
 .be-chart-chords.n3 .be-chord,
-.be-chart-chords.n4 .be-chord{flex:1 1 0; min-width:0; text-align:left;}
+.be-chart-chords.n4 .be-chord{
+  flex:1 1 0; min-width:min-content; text-align:left; padding-right:2px; box-sizing:border-box;
+}
 .be-chart-chords.n3 .be-chord{font-size:16px;}
-.be-chart-chords.n4 .be-chord{font-size:15px;}
+.be-chart-chords.n4 .be-chord{font-size:14px;}
 .be-chart-pct{display:inline-flex; align-items:center; justify-content:center; color:var(--paper-ink); line-height:1;}
 .be-chart-pct-svg{display:block; width:1.15em; height:1.45em;}
 .be-chart-nc{font-family:"Space Mono",monospace; font-size:13px; letter-spacing:.04em; color:#8a7a52;}
 .be-chart-raw{font-family:"Space Mono",monospace; font-size:11px; color:#8a7a52; word-break:break-all;}
-.be-chord{font-family:"Fraunces",Georgia,serif; font-weight:500; font-size:20px; color:var(--paper-ink); line-height:1; white-space:nowrap; flex:0 0 auto;}
+.be-chord{font-family:"Fraunces",Georgia,serif; font-weight:500; font-size:20px; color:var(--paper-ink); line-height:1.05; white-space:nowrap; flex:0 0 auto; overflow:visible;}
+.be-chord-ext{margin-right:1px;}
 .be-chord-root{letter-spacing:-.02em;}
 .be-readout-key .be-chord-root{font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:30px; color:var(--oxblood);}
 .be-readout-key .be-chord-acc{font-size:.55em; vertical-align:super; font-family:"Space Mono",monospace; font-weight:400; color:var(--oxblood);}

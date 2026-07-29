@@ -60,6 +60,23 @@ describe("Chart renderer", () => {
     expect(nc.textContent).toBe("N.C.");
   });
 
+  it("G69 se muestra sin △ (solo G⁶⁹)", () => {
+    const { ast } = parseChart("T44\n[A] G69 |");
+    const { container } = render(<Chart ast={ast} />);
+    const chord = container.querySelector(".be-chord");
+    expect(chord?.textContent).toBe("G69");
+    expect(chord?.querySelector(".be-chord-qual")).toBeNull();
+    expect(chord?.querySelector(".be-chord-ext")?.textContent).toBe("69");
+  });
+
+  it("G^7 sí muestra △", () => {
+    const { ast } = parseChart("T44\n[A] G^7 |");
+    const { container } = render(<Chart ast={ast} />);
+    const chord = container.querySelector(".be-chord");
+    expect(chord?.querySelector(".be-chord-qual")?.textContent).toBe("△");
+    expect(chord?.querySelector(".be-chord-ext")?.textContent).toBe("7");
+  });
+
   it("marca .start y notifica onMeasureSelect al tocar", () => {
     const { ast } = parseChart(EAST_OF_SUN_CHART);
     const picked = [];
