@@ -166,7 +166,20 @@
 .be-improv-v{color:var(--paper-ink); font-family:"Space Mono",monospace; font-size:12px;}
 .be-improv-v strong{font-family:"Fraunces",Georgia,serif; font-size:14px; font-weight:600;}
 .be-improv-form{color:#8a7a52; font-size:10px;}
-.be-sheet.atril .be-improv{display:none;}
+.be-improv-modes{display:flex; gap:6px; flex-wrap:wrap; margin:0 0 10px;}
+.be-improv-mode{font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+  background:transparent; border:1px solid var(--paper-line); color:#8a7a52; border-radius:8px; padding:5px 8px; cursor:pointer;}
+.be-improv-mode.on{border-color:var(--oxblood); color:var(--oxblood); background:rgba(154,58,58,.08);}
+.be-improv-listen{display:inline-flex; align-items:center; gap:4px; margin-left:8px; vertical-align:middle;
+  font-family:"Space Mono",monospace; font-size:10px; letter-spacing:.04em; text-transform:uppercase;
+  background:transparent; border:1px solid var(--paper-line); color:var(--paper-ink); border-radius:999px;
+  padding:3px 8px; cursor:pointer;}
+.be-improv-listen:hover,.be-improv-listen.on{border-color:var(--oxblood); color:var(--oxblood);}
+.be-improv-section-lead{font-size:14px; line-height:1.4; margin:0 0 10px; color:var(--paper-ink);}
+.be-improv-outliers{margin-top:8px; font-size:12px; color:#5f5540; line-height:1.4;}
+.be-sheet.atril .be-improv{margin:12px 0 16px; padding:14px 16px;}
+.be-sheet.atril .be-improv-chord-name{font-size:22px;}
+.be-sheet.atril .be-improv-v{font-size:13px;}
 
 .be-chart-measure.active.start{background:rgba(201,162,75,.14); box-shadow:inset 0 0 0 1.5px var(--oxblood);}
 .be-chart-measure.selectable{cursor:pointer;}
@@ -195,11 +208,11 @@
 .be-chart-alt{position:absolute; top:2px; right:4px; left:auto; font-size:11px; color:#8a7a52; transform:scale(.85); transform-origin:top right;}
 .be-chart-chords{display:flex; flex-wrap:nowrap; gap:4px 8px; align-items:baseline;
   justify-content:flex-start; width:100%; min-width:0;}
-.be-chart-chords.n2{justify-content:space-between; gap:0;}
+.be-chart-chords.n2,
 .be-chart-chords.n3,
-.be-chart-chords.n4{justify-content:space-around; gap:0;}
-.be-chart-chords.n3 .be-chord{font-size:15px;}
-.be-chart-chords.n4 .be-chord{font-size:13px;}
+.be-chart-chords.n4{justify-content:space-between; gap:0;}
+.be-chart-chords.n3 .be-chord{font-size:16px;}
+.be-chart-chords.n4 .be-chord{font-size:15px;}
 .be-chart-pct{display:inline-flex; align-items:center; justify-content:center; color:var(--paper-ink); line-height:1;}
 .be-chart-pct-svg{display:block; width:1.15em; height:1.45em;}
 .be-chart-nc{font-family:"Space Mono",monospace; font-size:13px; letter-spacing:.04em; color:#8a7a52;}
@@ -280,8 +293,8 @@
 .be-sheet.atril .be-chord{font-size:28px;}
 .be-sheet.atril .be-chart-measure{min-height:72px; padding:14px 8px;}
 .be-sheet.atril .be-chart-label{font-size:14px;}
-.be-sheet.atril .be-chart-chords.n3 .be-chord{font-size:18px;}
-.be-sheet.atril .be-chart-chords.n4 .be-chord{font-size:15px;}
+.be-sheet.atril .be-chart-chords.n3 .be-chord{font-size:20px;}
+.be-sheet.atril .be-chart-chords.n4 .be-chord{font-size:17px;}
 
 /* Impresión: solo el papel/chart */
 @media print{

@@ -1,26 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { parseChord } from "../chart/parse.js";
+import { parseChord, parseChart } from "../chart/parse.js";
 import { primaryScale, suggestScales } from "./scales.js";
 import { findIiVI, suggestVoicings } from "./voicings.js";
-import { buildChordGuide, guideForActiveMeasure } from "./guide.js";
-import { parseChart } from "../chart/parse.js";
+import {
+  buildChordGuide,
+  guideForActiveMeasure,
+  guideForSection,
+} from "./guide.js";
+import { suggestSectionScales } from "./sectionScales.js";
+import { scaleNotesToMidis } from "../audio/audition.js";
 
 describe("suggestScales", () => {
   it("D-7 → Dorian", () => {
     const s = primaryScale(parseChord("D-7"));
     expect(s.id).toBe("dorian");
     expect(s.notes[0]).toBe("D");
-    expect(s.notes).toContain("C"); // b7
+    expect(s.notes).toContain("C");
   });
 
   it("G7b9 → alt", () => {
-    const s = primaryScale(parseChord("G7b9"));
-    expect(s.id).toBe("alt");
+    expect(primaryScale(parseChord("G7b9")).id).toBe("alt");
   });
 
   it("C^7 → Ionian", () => {
-    const s = primaryScale(parseChord("C^7"));
-    expect(s.id).toBe("ionian");
+    expect(primaryScale(parseChord("C^7")).id).toBe("ionian");
   });
 
   it("Ah7 → Locrian", () => {
@@ -36,8 +39,7 @@ describe("suggestScales", () => {
   });
 
   it("devuelve alternativas", () => {
-    const all = suggestScales(parseChord("D-7"));
-    expect(all.length).toBeGreaterThan(1);
+    expect(suggestScales(parseChord("D-7")).length).toBeGreaterThan(1);
   });
 });
 
@@ -86,5 +88,39 @@ describe("guide", () => {
     const g = guideForActiveMeasure(ast, 0, null);
     expect(g.chords[0].primary.id).toBe("dorian");
     expect(g.progression).toMatch(/ii/);
+  });
+
+  it("guideForSection sugiere escalas cómodas", () => {
+    const { ast } = parseChart(
+      "T44\n[A] D-7 | G7 | C^7 | % |\n[B] E-7 | A7 | D-7 | % |"
+    );
+    const g = guideForSection(ast, 0, null);
+    expect(g.label).toBe("A");
+    expect(g.scales.length).toBeGreaterThan(0);
+    expect(g.scales[0].notes.length).toBeGreaterThanOrEqual(7);
+  });
+});
+
+describe("suggestSectionScales", () => {
+  it("ii–V–I en C favorece una escala de C o D", () => {
+    const { scales, outliers } = suggestSectionScales([
+      parseChord("D-7"),
+      parseChord("G7"),
+      parseChord("C^7"),
+    ]);
+    expect(scales.length).toBeGreaterThan(0);
+    const names = scales.map((s) => s.name).join(" ");
+    expect(/C |D /.test(names)).toBe(true);
+    expect(Array.isArray(outliers)).toBe(true);
+  });
+});
+
+describe("audition midis", () => {
+  it("escala ascendente sin bajar de octava", () => {
+    const midis = scaleNotesToMidis(["C", "D", "E", "F", "G", "A", "B"]);
+    expect(midis).toHaveLength(7);
+    for (let i = 1; i < midis.length; i++) {
+      expect(midis[i]).toBeGreaterThan(midis[i - 1]);
+    }
   });
 });

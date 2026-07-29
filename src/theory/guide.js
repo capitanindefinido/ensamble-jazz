@@ -4,6 +4,7 @@
 
 import { formatChord } from "../chart/parse.js";
 import { primaryScale, suggestScales } from "./scales.js";
+import { suggestSectionScales } from "./sectionScales.js";
 import {
   findIiVI,
   suggestVoicings,
@@ -127,6 +128,48 @@ export function guideForActiveMeasure(ast, activeMeasure, startMeasure) {
   const measure = findMeasure(ast, idx);
   if (!measure) return null;
   return buildMeasureGuide(measure, { roles });
+}
+
+/**
+ * Sección que contiene un índice de compás.
+ */
+export function findSectionForMeasure(ast, measureIndex) {
+  if (!ast?.sections) return null;
+  for (const sec of ast.sections) {
+    if ((sec.measures || []).some((m) => m.index === measureIndex)) {
+      return sec;
+    }
+  }
+  return ast.sections[0] || null;
+}
+
+/**
+ * Guía a nivel de sección (escalas cómodas + excepciones).
+ */
+export function guideForSection(ast, activeMeasure, startMeasure) {
+  if (!ast) return null;
+  let idx = activeMeasure;
+  if (idx == null) idx = startMeasure;
+  if (idx == null) {
+    idx = ast.sections?.[0]?.measures?.[0]?.index ?? 0;
+  }
+  const section = findSectionForMeasure(ast, idx);
+  if (!section) return null;
+
+  const chords = [];
+  for (const m of section.measures || []) {
+    for (const c of m.chords || []) {
+      if (c) chords.push(c);
+    }
+  }
+  const { scales, outliers } = suggestSectionScales(chords);
+  return {
+    label: section.label || "—",
+    measureIndex: idx,
+    scales,
+    outliers,
+    chordCount: chords.length,
+  };
 }
 
 export { primaryScale, suggestScales, suggestVoicings, findIiVI };

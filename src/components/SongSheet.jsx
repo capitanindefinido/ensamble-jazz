@@ -26,7 +26,7 @@ import {
   saveClave,
   saveRepertorioFields,
 } from "../data/sheetWrite.js";
-import { guideForActiveMeasure } from "../theory/guide.js";
+import { guideForActiveMeasure, guideForSection } from "../theory/guide.js";
 
 const BPM_MIN = 40;
 const BPM_MAX = 200;
@@ -57,6 +57,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
   const [harmonyVol, setHarmonyVol] = useState(DEFAULT_HARMONY_VOLUME);
   const [atril, setAtril] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [guideMode, setGuideMode] = useState("chord"); // chord | section
   const [notas, setNotas] = useState(String(song.notas || ""));
   const [clave, setClave] = useState(() => loadClave());
   const [notesStatus, setNotesStatus] = useState(null);
@@ -102,6 +103,11 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
   const improvGuide = useMemo(() => {
     if (!showGuide || !displayAst) return null;
     return guideForActiveMeasure(displayAst, activeMeasure, startMeasure);
+  }, [showGuide, displayAst, activeMeasure, startMeasure]);
+
+  const sectionGuide = useMemo(() => {
+    if (!showGuide || !displayAst) return null;
+    return guideForSection(displayAst, activeMeasure, startMeasure);
   }, [showGuide, displayAst, activeMeasure, startMeasure]);
 
   useEffect(() => {
@@ -246,7 +252,6 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
 
   const enterAtril = async () => {
     setShowChart(true);
-    setShowGuide(false);
     setAtril(true);
     try {
       const el = paperRef.current?.closest(".be-sheet") || paperRef.current;
@@ -463,7 +468,12 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                 )}
                 {showGuide ? (
                   <div ref={guideRef}>
-                    <ImprovGuide guide={improvGuide} />
+                    <ImprovGuide
+                      mode={guideMode}
+                      onModeChange={setGuideMode}
+                      guide={improvGuide}
+                      sectionGuide={sectionGuide}
+                    />
                   </div>
                 ) : null}
                 {warnings.length > 0 ? (
