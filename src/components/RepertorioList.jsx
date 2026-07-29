@@ -13,7 +13,7 @@ export default function RepertorioList({ songs, query, onOpen }) {
       <div className="be-msg">
         <strong>Sin repertorio</strong>
         Este ensamble aún no tiene repertorio. Agrega una fila en la pestaña
-        Repertorio del Sheet y aparece acá.
+        Repertorio del Sheet y aparece aquí.
       </div>
     );
   }

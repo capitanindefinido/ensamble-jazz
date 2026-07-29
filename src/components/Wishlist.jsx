@@ -67,7 +67,7 @@ export default function Wishlist({
   const handlePropose = async (e) => {
     e.preventDefault();
     if (!me) {
-      setStatus({ type: "err", message: "Elegí quién sos primero" });
+      setStatus({ type: "err", message: "Elige quién eres primero" });
       return;
     }
     const t = titulo.trim();
@@ -116,7 +116,7 @@ export default function Wishlist({
 
   const handleVote = async (deseoId, likedByMe) => {
     if (!me) {
-      setStatus({ type: "err", message: "Elegí quién sos para votar" });
+      setStatus({ type: "err", message: "Elige quién eres para votar" });
       return;
     }
     if (!likedByMe && remaining <= 0) {
@@ -207,7 +207,7 @@ export default function Wishlist({
   return (
     <section className="be-wishlist">
       <p className="be-wishlist-lead">
-        Proponé temas para sacar y repartí hasta {MAX_VOTES_PER_PERSON} me gusta.
+        Propón temas para sacar y reparte hasta {MAX_VOTES_PER_PERSON} me gusta.
         La lista se ordena por votos.
       </p>
 
@@ -216,9 +216,9 @@ export default function Wishlist({
         <select
           value={me}
           onChange={(e) => pickMe(e.target.value)}
-          aria-label="Elegí tu nombre"
+          aria-label="Elige tu nombre"
         >
-          <option value="">Elegí tu nombre…</option>
+          <option value="">Elige tu nombre…</option>
           {roster.map((m) => (
             <option key={m.nombre} value={m.nombre}>
               {m.nombre}
@@ -295,7 +295,7 @@ export default function Wishlist({
                     className="be-wishlist-admin-btn"
                     onClick={() => handleEstado(d.id, "a_sacar")}
                     disabled={busy || !clave}
-                    title={!clave ? "Poné la clave abajo" : "Marcar a sacar"}
+                    title={!clave ? "Pon la clave abajo" : "Marcar a sacar"}
                   >
                     A sacar
                   </button>

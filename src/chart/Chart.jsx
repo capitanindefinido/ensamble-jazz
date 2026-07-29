@@ -106,7 +106,16 @@ function Measure({ measure: m, active, start, onSelect }) {
           <ChordView chord={m.alternate} />
         </span>
       ) : null}
-      <div className="be-chart-chords">
+      <div
+        className={
+          "be-chart-chords" +
+          (m.chords?.length >= 4
+            ? " n4"
+            : m.chords?.length === 3
+              ? " n3"
+              : "")
+        }
+      >
         {m.repeatPrev ? (
           <span className="be-chart-pct" aria-label="repite compás anterior">
             <svg

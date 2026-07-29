@@ -191,7 +191,7 @@ export default function App() {
         <div className="be-glow" />
         <div className="be-app">
           <div className="be-msg">
-            <strong>No pude cargar los datos</strong>
+            <strong>No se pudieron cargar los datos</strong>
             {error?.message ||
               "Revisa el Sheet y la conexión, e intenta de nuevo."}
           </div>

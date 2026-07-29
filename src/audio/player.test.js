@@ -8,6 +8,7 @@ import {
   flattenMeasures,
   measureBeatTimes,
   secondsPerBeat,
+  shouldPlayVoicing,
   voicingMidis,
 } from "./player.js";
 import { unlockAudio } from "./scheduler.js";
@@ -72,6 +73,21 @@ describe("ChartPlayer — helpers", () => {
     expect(beats[3].quality).toBe("dom");
   });
 
+  it("reparte cuatro acordes uno por beat", () => {
+    const measure = {
+      chords: [
+        parseChord("A-7"),
+        parseChord("G#"),
+        parseChord("G"),
+        parseChord("A#"),
+      ],
+    };
+    const beats = chordsForBeats(measure, 4);
+    expect(beats.map((c) => c.root.letter)).toEqual(["A", "G", "G", "A"]);
+    expect(beats[1].root.alter).toBe(1);
+    expect(beats[3].root.alter).toBe(1);
+  });
+
   it("% ya trae acordes copiados — el player los usa", () => {
     const { ast } = parseChart(EAST_OF_SUN_CHART);
     const flat = flattenMeasures(ast);
@@ -94,12 +110,28 @@ describe("ChartPlayer — helpers", () => {
     expect(Math.abs(m1 - m0) % 12).toBe(7);
   });
 
-  it("voicing maj7 usa 3ra mayor y 7ma mayor", () => {
+  it("con ≥3 acordes el bajo se queda en la fundamental", () => {
+    const chord = parseChord("C-7");
+    const m0 = bassMidiForBeat(chord, 0, 4);
+    const m1 = bassMidiForBeat(chord, 1, 4);
+    expect(m0).toBe(m1);
+  });
+
+  it("voicing incluye 3ra y 7ma en el cluster", () => {
     const chord = parseChord("Bb^7");
     const v = voicingMidis(chord);
     const tones = chordTones(chord);
-    expect(v.third % 12).toBe(tones.thirdPc);
-    expect(v.seventh % 12).toBe(tones.seventhPc);
+    const pcs = [v.low, v.mid, v.high].map((m) => m % 12);
+    expect(pcs).toContain(tones.thirdPc);
+    expect(pcs).toContain(tones.seventhPc);
+  });
+
+  it("voicing suena en cada cambio de acorde", () => {
+    const a = parseChord("A-7");
+    const b = parseChord("G#");
+    expect(shouldPlayVoicing(0, a, null, 4)).toBe(true);
+    expect(shouldPlayVoicing(1, b, a, 4)).toBe(true);
+    expect(shouldPlayVoicing(2, b, b, 4)).toBe(false);
   });
 });
 

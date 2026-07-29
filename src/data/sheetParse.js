@@ -136,7 +136,7 @@ export function parseCsv(text, fields, { tabName, requiredKeys } = {}) {
     if (fatal) {
       throw new SheetError(
         "parse",
-        "No pude leer el CSV del Sheet. Revisa que las celdas con saltos de línea estén bien entre comillas."
+        "No se pudo leer el CSV del Sheet. Revisa que las celdas con saltos de línea estén bien entre comillas."
       );
     }
   }
@@ -208,7 +208,7 @@ export async function fetchTab(sheetId, tabName, fields, fetchFn = fetch) {
   if (!res.ok) {
     throw new SheetError(
       "http",
-      `No pude cargar la pestaña '${tabName}' (error ${res.status}). Revisa el enlace del Sheet e intenta de nuevo.`
+      `No se pudo cargar la pestaña '${tabName}' (error ${res.status}). Revisa el enlace del Sheet e intenta de nuevo.`
     );
   }
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ExternalLink, FileText, Maximize2, Pause, Play, Printer, RotateCcw, Save, Upload, X } from "lucide-react";
+import { ExternalLink, FileText, Lightbulb, Maximize2, Pause, Play, Printer, RotateCcw, Save, X } from "lucide-react";
 import Metronome from "./Metronome.jsx";
 import Chart, { KeyDisplay, TransposeBar } from "../chart/Chart.jsx";
+import ImprovGuide from "./ImprovGuide.jsx";
 import {
   deriveKeyFromAst,
   parseChart,
@@ -25,6 +26,7 @@ import {
   saveClave,
   saveRepertorioFields,
 } from "../data/sheetWrite.js";
+import { guideForActiveMeasure } from "../theory/guide.js";
 
 const BPM_MIN = 40;
 const BPM_MAX = 200;
@@ -54,6 +56,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
   const [clickVol, setClickVol] = useState(DEFAULT_CLICK_VOLUME);
   const [harmonyVol, setHarmonyVol] = useState(DEFAULT_HARMONY_VOLUME);
   const [atril, setAtril] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [notas, setNotas] = useState(String(song.notas || ""));
   const [clave, setClave] = useState(() => loadClave());
   const [notesStatus, setNotesStatus] = useState(null);
@@ -94,6 +97,11 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
     if (totalShift === 0) return baseAst;
     return transposeAst(baseAst, totalShift, displayKeyPitch);
   }, [baseAst, totalShift, displayKeyPitch]);
+
+  const improvGuide = useMemo(() => {
+    if (!showGuide || !displayAst) return null;
+    return guideForActiveMeasure(displayAst, activeMeasure, startMeasure);
+  }, [showGuide, displayAst, activeMeasure, startMeasure]);
 
   useEffect(() => {
     const player = new ChartPlayer({
@@ -232,6 +240,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
 
   const enterAtril = async () => {
     setShowChart(true);
+    setShowGuide(false);
     setAtril(true);
     try {
       const el = paperRef.current?.closest(".be-sheet") || paperRef.current;
@@ -406,6 +415,16 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                     </button>
                     <button
                       type="button"
+                      className={"be-play-btn ghost" + (showGuide ? " on" : "")}
+                      onClick={() => setShowGuide((v) => !v)}
+                      aria-label="Ayuda de improvisación"
+                      aria-pressed={showGuide}
+                    >
+                      <Lightbulb size={14} />
+                      <span>Ayuda</span>
+                    </button>
+                    <button
+                      type="button"
                       className="be-play-btn ghost"
                       onClick={enterAtril}
                       aria-label="Modo atril"
@@ -433,7 +452,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                   </p>
                 ) : (
                   <p className="be-play-from">
-                    Tocá un compás para partir desde ahí
+                    Toca un compás para partir desde ahí
                   </p>
                 )}
                 {warnings.length > 0 ? (
@@ -449,6 +468,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                   startMeasure={startMeasure}
                   onMeasureSelect={handleMeasureSelect}
                 />
+                {showGuide ? <ImprovGuide guide={improvGuide} /> : null}
               </div>
             ) : hasPdf && previewUrl && iframeOk ? (
               <div className="be-chart-pdf">
@@ -470,7 +490,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
             ) : hasPdf ? (
               <div className="be-chart-empty">
                 <FileText size={26} strokeWidth={1.4} />
-                <p className="be-chart-empty-t">No pude mostrar el PDF acá</p>
+                <p className="be-chart-empty-t">No se pudo mostrar el PDF aquí</p>
                 <p className="be-chart-empty-s">
                   Ábrelo directo en Drive — el preview no cargó.
                 </p>
@@ -488,7 +508,7 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
                 <FileText size={26} strokeWidth={1.4} />
                 <p className="be-chart-empty-t">Aún no hay chart cargado</p>
                 <p className="be-chart-empty-s">
-                  Deja el PDF en la carpeta del ensamble y aparece acá para
+                  Deja el PDF en la carpeta del ensamble y aparece aquí para
                   todos.
                 </p>
                 <button className="be-chart-upload" disabled>

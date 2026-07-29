@@ -84,7 +84,7 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
       await navigator.clipboard.writeText(chartText);
       setStatus({ type: "ok", message: "Chart copiado al portapapeles" });
     } catch {
-      setStatus({ type: "err", message: "No pude copiar — seleccioná el texto a mano" });
+      setStatus({ type: "err", message: "No se pudo copiar — selecciona el texto a mano" });
     }
   };
 
@@ -137,11 +137,11 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
 
   const handleImport = async () => {
     if (!importEnsamble) {
-      setImportStatus({ type: "err", message: "Elegí un ensamble" });
+      setImportStatus({ type: "err", message: "Elige un ensamble" });
       return;
     }
     if (!importHtml.trim()) {
-      setImportStatus({ type: "err", message: "Subí o pegá un HTML de iReal" });
+      setImportStatus({ type: "err", message: "Sube o pega un HTML de iReal" });
       return;
     }
 
@@ -223,7 +223,7 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
               value={importEnsamble}
               onChange={(e) => setImportEnsamble(e.target.value)}
             >
-              <option value="">Elegí ensamble…</option>
+              <option value="">Elige ensamble…</option>
               {ensambles.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.nombre || e.id}
@@ -241,7 +241,7 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
           </label>
 
           <label className="be-editor-field">
-            <span>O pegá el HTML</span>
+            <span>O pega el HTML</span>
             <textarea
               className="be-editor-ta be-editor-ta-sm"
               rows={4}
@@ -251,7 +251,7 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
                 setImportFileName("");
                 setImportStatus(null);
               }}
-              placeholder="Pegá acá el HTML exportado de iReal Pro…"
+              placeholder="Pega aquí el HTML exportado de iReal Pro…"
               spellCheck={false}
             />
           </label>
@@ -291,7 +291,7 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
             value={songKey}
             onChange={(e) => setSongKey(e.target.value)}
           >
-            <option value="">Elegí un tema…</option>
+            <option value="">Elige un tema…</option>
             {songs.map((s) => (
               <option
                 key={`${s.ensamble_id}::${s.titulo}`}
@@ -341,7 +341,7 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
           {selected && ast?.sections?.length ? (
             <Chart ast={ast} />
           ) : (
-            <p className="be-notes-empty">El preview aparece acá.</p>
+            <p className="be-notes-empty">El preview aparece aquí.</p>
           )}
         </div>
 
@@ -387,8 +387,8 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
         ) : null}
 
         <p className="be-editor-hint">
-          Ruta discreta <code>#/editor</code>. Sin Apps Script, usá Copiar y
-          pegá en la celda chart del Sheet.
+          Ruta discreta <code>#/editor</code>. Sin Apps Script, usa Copiar y
+          pega en la celda chart del Sheet.
         </p>
       </div>
     </div>

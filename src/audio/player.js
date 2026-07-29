@@ -85,22 +85,79 @@ export function chordsForBeats(measure, beats) {
   });
 }
 
-/** Notas de bajo por beat: fund–5ta–fund–5ta (relativo al acorde del beat). */
-export function bassMidiForBeat(chord, beatInBar) {
+/** Notas de bajo por beat: fund–5ta–fund–5ta; con ≥3 acordes, siempre la fundamental. */
+export function bassMidiForBeat(chord, beatInBar, chordCount = 1) {
   const tones = chordTones(chord);
   if (!tones) return null;
-  const useFifth = beatInBar % 2 === 1;
+  const useFifth = chordCount < 3 && beatInBar % 2 === 1;
   const pc = useFifth ? tones.fifthPc : tones.bassPc;
   return (BASS_OCTAVE + 1) * 12 + pc;
 }
 
+/**
+ * Voicing close: 3ra + 7ma + 9na (o 5ta si no hay 7 útil), en registro medio.
+ * Evita saltos raros ordenando midis ascendentes cerca de C4.
+ */
 export function voicingMidis(chord) {
   const tones = chordTones(chord);
   if (!tones) return null;
+
+  const pcs = [tones.thirdPc, tones.seventhPc, (tones.rootPc + 2) % 12];
+  // Si es tríada “vacía” de color, incluir 5ta en vez de 9na
+  const hasSeventh =
+    chord.ext?.includes("7") ||
+    chord.ext?.includes("6") ||
+    chord.quality === "halfdim" ||
+    chord.quality === "dim";
+  if (!hasSeventh && !(chord.ext || []).length) {
+    pcs[1] = tones.fifthPc;
+    pcs[2] = tones.seventhPc; // color suave
+  }
+
+  const midis = placeClose(pcs, VOICE_OCTAVE);
   return {
-    third: (VOICE_OCTAVE + 1) * 12 + tones.thirdPc,
-    seventh: (VOICE_OCTAVE + 1) * 12 + tones.seventhPc,
+    low: midis[0],
+    mid: midis[1],
+    high: midis[2],
+    // compat tests antiguos
+    third: midis[0],
+    seventh: midis[1],
   };
+}
+
+/** Coloca pitch classes en octava base, ordenadas y compactas (±1 octava). */
+export function placeClose(pcs, octave = 4) {
+  const base = (octave + 1) * 12;
+  let midis = pcs.map((pc) => base + (pc % 12));
+  midis.sort((a, b) => a - b);
+  // Compactar: si el span > 8 semitonos, bajar la más aguda una octava si ayuda
+  for (let i = 1; i < midis.length; i++) {
+    while (midis[i] - midis[0] > 14) midis[i] -= 12;
+    while (midis[i] < midis[i - 1]) midis[i] += 12;
+  }
+  midis.sort((a, b) => a - b);
+  return midis;
+}
+
+function chordKey(chord) {
+  if (!chord?.root) return "";
+  return [
+    chord.root.letter,
+    chord.root.alter,
+    chord.quality,
+    (chord.ext || []).join(""),
+    chord.bass ? `${chord.bass.letter}${chord.bass.alter}` : "",
+  ].join(":");
+}
+
+/** ¿Hay que atacar voicing en este beat? */
+export function shouldPlayVoicing(beat, chord, prevChord, chordCount) {
+  if (!chord) return false;
+  if (beat === 0) return true;
+  if (chordKey(chord) !== chordKey(prevChord)) return true;
+  // Un solo acorde (o dos): refuerzo en el beat 2
+  if (chordCount <= 2 && beat === 2) return true;
+  return false;
 }
 
 function playTone(ctx, time, freq, { duration = 0.18, peak = 0.12, type = "triangle" } = {}) {
@@ -120,8 +177,8 @@ function playTone(ctx, time, freq, { duration = 0.18, peak = 0.12, type = "trian
 function playBass(ctx, time, midi) {
   if (midi == null) return;
   playTone(ctx, time, freqFromMidi(midi), {
-    duration: 0.32,
-    peak: 0.2,
+    duration: 0.36,
+    peak: 0.18,
     type: "sine",
   });
 }
@@ -129,15 +186,14 @@ function playBass(ctx, time, midi) {
 function playVoicing(ctx, time, chord) {
   const v = voicingMidis(chord);
   if (!v) return;
-  playTone(ctx, time, freqFromMidi(v.third), {
-    duration: 0.4,
-    peak: 0.09,
-    type: "triangle",
-  });
-  playTone(ctx, time, freqFromMidi(v.seventh), {
-    duration: 0.4,
-    peak: 0.075,
-    type: "triangle",
+  const peaks = [0.07, 0.055, 0.045];
+  const midis = [v.low, v.mid, v.high].filter((m) => m != null);
+  midis.forEach((midi, i) => {
+    playTone(ctx, time, freqFromMidi(midi), {
+      duration: 0.55,
+      peak: peaks[i] ?? 0.04,
+      type: "triangle",
+    });
   });
 }
 
@@ -334,12 +390,14 @@ export class ChartPlayer {
         const measureIndex = measure?.index ?? cur.measureIdx;
         const perBeat = chordsForBeats(measure, beats);
         const chord = perBeat[cur.beat];
+        const prevChord = cur.beat > 0 ? perBeat[cur.beat - 1] : null;
+        const chordCount = (measure?.chords || []).filter(Boolean).length;
 
         playClick(ctx, when, isDownbeat);
 
         if (chord && !measure?.invalid) {
-          playBass(ctx, when, bassMidiForBeat(chord, cur.beat));
-          if (cur.beat === 0 || cur.beat === 2) {
+          playBass(ctx, when, bassMidiForBeat(chord, cur.beat, chordCount));
+          if (shouldPlayVoicing(cur.beat, chord, prevChord, chordCount)) {
             playVoicing(ctx, when, chord);
           }
         }

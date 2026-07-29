@@ -47,7 +47,7 @@ export default function Roster({ integrantes }) {
       <div className="be-msg">
         <strong>Sin integrantes</strong>
         Este ensamble aún no tiene integrantes. Agrega filas en la pestaña
-        Integrantes del Sheet y aparecen acá.
+        Integrantes del Sheet y aparecen aquí.
       </div>
     );
   }
