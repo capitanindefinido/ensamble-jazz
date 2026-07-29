@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Music4, Users } from "lucide-react";
+import { ChevronRight, Heart, Music4, Users } from "lucide-react";
 import { loadLibrary } from "./data/sheet.js";
 import SearchBar from "./components/SearchBar.jsx";
 import RepertorioList from "./components/RepertorioList.jsx";
@@ -8,6 +8,7 @@ import SongSheet from "./components/SongSheet.jsx";
 import EnsemblePicker from "./components/EnsemblePicker.jsx";
 import EnsembleQr from "./components/EnsembleQr.jsx";
 import ChartEditor from "./components/ChartEditor.jsx";
+import Wishlist from "./components/Wishlist.jsx";
 
 function parseHashRoute() {
   const raw = window.location.hash || "";
@@ -146,6 +147,9 @@ export default function App() {
       (m) => m.ensamble_id === ensamble.id
     );
   }, [bundle, ensamble]);
+
+  const deseos = bundle?.deseos || [];
+  const votos = bundle?.votos || [];
 
   const selectEnsamble = (id) => {
     const next = ensambleHash(id);
@@ -358,6 +362,12 @@ export default function App() {
           >
             <Users size={15} /> Integrantes
           </button>
+          <button
+            className={"be-tab" + (tab === "deseos" ? " active" : "")}
+            onClick={() => setTab("deseos")}
+          >
+            <Heart size={15} /> Deseos
+          </button>
         </nav>
 
         {tab === "repertorio" && (
@@ -368,6 +378,23 @@ export default function App() {
         )}
 
         {tab === "integrantes" && <Roster integrantes={integrantes} />}
+
+        {tab === "deseos" && ensamble ? (
+          <Wishlist
+            ensambleId={ensamble.id}
+            integrantes={bundle?.integrantes || []}
+            deseos={deseos}
+            votos={votos}
+            onLocalUpdate={({ deseos: d, votos: v }) => {
+              setBundle((prev) =>
+                prev
+                  ? { ...prev, deseos: d, votos: v }
+                  : prev
+              );
+            }}
+            onRefresh={refreshLibrary}
+          />
+        ) : null}
 
         <footer className="be-foot">
           <span>Club de Jazz de Santiago · Casa Maroto</span>

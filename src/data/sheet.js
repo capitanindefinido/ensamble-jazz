@@ -28,6 +28,13 @@ function readCache(sheetId) {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.data || !parsed?.timestamp) return null;
+    parsed.data = {
+      ensambles: parsed.data.ensambles || [],
+      repertorio: parsed.data.repertorio || [],
+      integrantes: parsed.data.integrantes || [],
+      deseos: parsed.data.deseos || [],
+      votos: parsed.data.votos || [],
+    };
     return parsed;
   } catch {
     return null;

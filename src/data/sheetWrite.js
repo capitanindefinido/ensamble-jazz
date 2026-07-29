@@ -100,3 +100,59 @@ export async function upsertRepertorioSongs(payload) {
     })),
   });
 }
+
+const ME_STORAGE = "be_wishlist_me";
+
+export function loadWishlistMe(ensambleId) {
+  try {
+    const raw = sessionStorage.getItem(ME_STORAGE);
+    if (!raw) return "";
+    const map = JSON.parse(raw);
+    return map?.[ensambleId] || "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveWishlistMe(ensambleId, nombre) {
+  try {
+    const raw = sessionStorage.getItem(ME_STORAGE);
+    const map = raw ? JSON.parse(raw) : {};
+    map[ensambleId] = nombre;
+    sessionStorage.setItem(ME_STORAGE, JSON.stringify(map));
+  } catch {
+    // ignore
+  }
+}
+
+/** Proponer tema (sin clave; requiere ser integrante). */
+export async function wishlistPropose({ ensambleId, titulo, propuestoPor, id }) {
+  return postJson({
+    action: "wishlist_propose",
+    ensamble_id: ensambleId,
+    titulo,
+    propuesto_por: propuestoPor,
+    id: id || undefined,
+  });
+}
+
+/** Toggle me gusta (sin clave). */
+export async function wishlistVote({ ensambleId, deseoId, votante }) {
+  return postJson({
+    action: "wishlist_vote",
+    ensamble_id: ensambleId,
+    deseo_id: deseoId,
+    votante,
+  });
+}
+
+/** Cambiar estado (requiere clave). */
+export async function wishlistSetEstado({ clave, ensambleId, deseoId, estado }) {
+  return postJson({
+    action: "wishlist_estado",
+    clave,
+    ensamble_id: ensambleId,
+    deseo_id: deseoId,
+    estado,
+  });
+}

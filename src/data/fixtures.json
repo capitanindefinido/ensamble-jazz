@@ -130,5 +130,168 @@
       "rol": "musico",
       "instrumento": ""
     }
-  ]
+  ],
+  "deseos": [
+    {
+      "id": "d_seed01",
+      "ensamble_id": "sabado-10",
+      "titulo": "Someday My Prince Will Come",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed02",
+      "ensamble_id": "sabado-10",
+      "titulo": "Como Fue",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed03",
+      "ensamble_id": "sabado-10",
+      "titulo": "Take Five",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed04",
+      "ensamble_id": "sabado-10",
+      "titulo": "My Funny Valentine",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed05",
+      "ensamble_id": "sabado-10",
+      "titulo": "It Don't Mean a Thing",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed06",
+      "ensamble_id": "sabado-10",
+      "titulo": "Stardust",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed07",
+      "ensamble_id": "sabado-10",
+      "titulo": "Tenderly",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed08",
+      "ensamble_id": "sabado-10",
+      "titulo": "There Will Never Be Another You",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed09",
+      "ensamble_id": "sabado-10",
+      "titulo": "Wave",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed10",
+      "ensamble_id": "sabado-10",
+      "titulo": "Hit the Road Jack",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed11",
+      "ensamble_id": "sabado-10",
+      "titulo": "Fever",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed12",
+      "ensamble_id": "sabado-10",
+      "titulo": "Pink Panther",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed13",
+      "ensamble_id": "sabado-10",
+      "titulo": "I Wanna Be Like You",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed14",
+      "ensamble_id": "sabado-10",
+      "titulo": "Chain of Fools",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed15",
+      "ensamble_id": "sabado-10",
+      "titulo": "Fly Me to the Moon",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed16",
+      "ensamble_id": "sabado-10",
+      "titulo": "L-O-V-E",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed17",
+      "ensamble_id": "sabado-10",
+      "titulo": "La Vie en Rose",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed18",
+      "ensamble_id": "sabado-10",
+      "titulo": "Take the A Train",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed19",
+      "ensamble_id": "sabado-10",
+      "titulo": "Sing Sing Sing",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    },
+    {
+      "id": "d_seed20",
+      "ensamble_id": "sabado-10",
+      "titulo": "Putting on the Ritz",
+      "propuesto_por": "lista inicial",
+      "estado": "abierta",
+      "creado": "2026-07-22"
+    }
+  ],
+  "votos": []
 }

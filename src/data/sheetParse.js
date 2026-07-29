@@ -22,13 +22,26 @@ export const REPERTORIO_FIELDS = [
 ];
 export const INTEGRANTE_FIELDS = ["ensamble_id", "nombre", "rol", "instrumento"];
 
-export const TABS = ["Ensambles", "Repertorio", "Integrantes"];
+export const DESEO_FIELDS = [
+  "id",
+  "ensamble_id",
+  "titulo",
+  "propuesto_por",
+  "estado",
+  "creado",
+];
+
+export const VOTO_FIELDS = ["ensamble_id", "deseo_id", "votante"];
+
+export const TABS = ["Ensambles", "Repertorio", "Integrantes", "Deseos", "Votos"];
 
 /** Columnas mínimas para detectar pestaña equivocada / headers malos. */
 export const REQUIRED_HEADERS = {
   Ensambles: ["id", "nombre"],
   Repertorio: ["ensamble_id", "titulo"],
   Integrantes: ["ensamble_id", "nombre", "rol"],
+  Deseos: ["id", "ensamble_id", "titulo"],
+  Votos: ["ensamble_id", "deseo_id", "votante"],
 };
 
 export class SheetError extends Error {
@@ -214,7 +227,7 @@ export async function fetchTab(sheetId, tabName, fields, fetchFn = fetch) {
   return parseCsv(text, fields, { tabName, requiredKeys });
 }
 
-/** Baja las tres pestañas y normaliza al dominio. */
+/** Baja las pestañas principales; Deseos/Votos son opcionales (vacío si faltan). */
 export async function fetchLibrary(sheetId, fetchFn = fetch) {
   const [ensambles, repertorioRaw, integrantes] = await Promise.all([
     fetchTab(sheetId, "Ensambles", ENSAMBLE_FIELDS, fetchFn),
@@ -222,10 +235,25 @@ export async function fetchLibrary(sheetId, fetchFn = fetch) {
     fetchTab(sheetId, "Integrantes", INTEGRANTE_FIELDS, fetchFn),
   ]);
 
+  let deseos = [];
+  let votos = [];
+  try {
+    deseos = await fetchTab(sheetId, "Deseos", DESEO_FIELDS, fetchFn);
+  } catch (err) {
+    if (!(err instanceof SheetError && err.code === "pestana")) throw err;
+  }
+  try {
+    votos = await fetchTab(sheetId, "Votos", VOTO_FIELDS, fetchFn);
+  } catch (err) {
+    if (!(err instanceof SheetError && err.code === "pestana")) throw err;
+  }
+
   return {
     ensambles,
     repertorio: coerceRepertorio(repertorioRaw),
     integrantes,
+    deseos,
+    votos,
   };
 }
 
@@ -234,7 +262,13 @@ export function splitSnapshot(snap) {
   if (!snap || typeof snap !== "object") {
     return {
       generado_en: null,
-      data: { ensambles: [], repertorio: [], integrantes: [] },
+      data: {
+        ensambles: [],
+        repertorio: [],
+        integrantes: [],
+        deseos: [],
+        votos: [],
+      },
     };
   }
   const {
@@ -242,9 +276,11 @@ export function splitSnapshot(snap) {
     ensambles = [],
     repertorio = [],
     integrantes = [],
+    deseos = [],
+    votos = [],
   } = snap;
   return {
     generado_en,
-    data: { ensambles, repertorio, integrantes },
+    data: { ensambles, repertorio, integrantes, deseos, votos },
   };
 }

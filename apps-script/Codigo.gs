@@ -1,5 +1,5 @@
 /**
- * Apps Script para guardar charts, notas e import iReal desde la app.
+ * Apps Script para guardar charts, notas, import iReal y lista de deseos.
  *
  * Deploy: Extensiones → Apps Script → pegar este archivo →
  * Implementar → Nueva implementación → Aplicación web
@@ -13,20 +13,41 @@
  *   A) Update simple:
  *      { clave, ensamble_id, titulo, chart?, notas? }
  *   B) Upsert lote (import iReal):
- *      { clave, ensamble_id, songs: [{ titulo, compositor, feel, bpm, tono, chart, notesText? }] }
+ *      { clave, ensamble_id, songs: [...] }
+ *   C) Lista de deseos:
+ *      { action: "wishlist_propose", ensamble_id, titulo, propuesto_por, id? }
+ *      { action: "wishlist_vote", ensamble_id, deseo_id, votante }
+ *      { action: "wishlist_estado", clave, ensamble_id, deseo_id, estado }
  */
 
 var SHEET_REPERTORIO = "Repertorio";
 var SHEET_CONFIG = "Config";
+var SHEET_INTEGRANTES = "Integrantes";
+var SHEET_DESEOS = "Deseos";
+var SHEET_VOTOS = "Votos";
+var MAX_VOTOS = 3;
 
 function doPost(e) {
   try {
     var raw = (e && e.postData && e.postData.contents) || "";
     var body = JSON.parse(raw);
+    var action = String(body.action || "");
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (action === "wishlist_propose") {
+      return wishlistPropose_(ss, body);
+    }
+    if (action === "wishlist_vote") {
+      return wishlistVote_(ss, body);
+    }
+    if (action === "wishlist_estado") {
+      var authEst = checkClave_(ss, String(body.clave || ""));
+      if (!authEst.ok) return jsonOut(authEst);
+      return wishlistEstado_(ss, body);
+    }
+
     var clave = String(body.clave || "");
     var ensambleId = String(body.ensamble_id || "");
-
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
     var auth = checkClave_(ss, clave);
     if (!auth.ok) return jsonOut(auth);
 
@@ -302,4 +323,216 @@ function jsonOut(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(
     ContentService.MimeType.JSON
   );
+}
+
+function sheetData_(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) return null;
+  var data = sheet.getDataRange().getValues();
+  if (!data.length) return null;
+  var headers = data[0].map(function (h) {
+    return String(h || "").trim().toLowerCase();
+  });
+  return { sheet: sheet, data: data, headers: headers };
+}
+
+function isIntegrante_(ss, ensambleId, nombre) {
+  var pack = sheetData_(ss, SHEET_INTEGRANTES);
+  if (!pack) return false;
+  var iEns = headerIndex_(pack.headers, "ensamble_id");
+  var iNom = headerIndex_(pack.headers, "nombre");
+  if (iEns < 0 || iNom < 0) return false;
+  var n = String(nombre || "").trim();
+  for (var r = 1; r < pack.data.length; r++) {
+    if (
+      String(pack.data[r][iEns] || "").trim() === ensambleId &&
+      String(pack.data[r][iNom] || "").trim() === n
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function wishlistPropose_(ss, body) {
+  var ensambleId = String(body.ensamble_id || "").trim();
+  var titulo = String(body.titulo || "").trim();
+  var propuestoPor = String(body.propuesto_por || "").trim();
+  var id = String(body.id || "").trim();
+  if (!ensambleId || !titulo || !propuestoPor) {
+    return jsonOut({ ok: false, error: "faltan ensamble_id, titulo o propuesto_por" });
+  }
+  if (!isIntegrante_(ss, ensambleId, propuestoPor)) {
+    return jsonOut({ ok: false, error: "propuesto_por no es integrante del ensamble" });
+  }
+
+  var pack = sheetData_(ss, SHEET_DESEOS);
+  if (!pack) {
+    return jsonOut({ ok: false, error: "no hay pestaña Deseos" });
+  }
+  var cols = {
+    id: headerIndex_(pack.headers, "id"),
+    ensamble_id: headerIndex_(pack.headers, "ensamble_id"),
+    titulo: headerIndex_(pack.headers, "titulo"),
+    propuesto_por: headerIndex_(pack.headers, "propuesto_por"),
+    estado: headerIndex_(pack.headers, "estado"),
+    creado: headerIndex_(pack.headers, "creado"),
+  };
+  if (cols.id < 0 || cols.ensamble_id < 0 || cols.titulo < 0) {
+    return jsonOut({ ok: false, error: "headers incompletos en Deseos" });
+  }
+
+  var key = normTitle_(titulo);
+  for (var r = 1; r < pack.data.length; r++) {
+    if (String(pack.data[r][cols.ensamble_id] || "").trim() !== ensambleId) continue;
+    var est = cols.estado >= 0 ? String(pack.data[r][cols.estado] || "") : "abierta";
+    if (est === "archivada") continue;
+    if (normTitle_(String(pack.data[r][cols.titulo] || "")) === key) {
+      return jsonOut({
+        ok: false,
+        error: "ya está en la lista",
+        existing_id: String(pack.data[r][cols.id] || ""),
+      });
+    }
+  }
+
+  if (!id) id = "d_" + Utilities.getUuid().replace(/-/g, "").slice(0, 8);
+  var creado = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var newRow = [];
+  for (var c = 0; c < pack.headers.length; c++) newRow[c] = "";
+  newRow[cols.id] = id;
+  newRow[cols.ensamble_id] = ensambleId;
+  newRow[cols.titulo] = titulo;
+  if (cols.propuesto_por >= 0) newRow[cols.propuesto_por] = propuestoPor;
+  if (cols.estado >= 0) newRow[cols.estado] = "abierta";
+  if (cols.creado >= 0) newRow[cols.creado] = creado;
+  pack.sheet.appendRow(newRow);
+
+  return jsonOut({
+    ok: true,
+    deseo: {
+      id: id,
+      ensamble_id: ensambleId,
+      titulo: titulo,
+      propuesto_por: propuestoPor,
+      estado: "abierta",
+      creado: creado,
+    },
+  });
+}
+
+function wishlistVote_(ss, body) {
+  var ensambleId = String(body.ensamble_id || "").trim();
+  var deseoId = String(body.deseo_id || "").trim();
+  var votante = String(body.votante || "").trim();
+  if (!ensambleId || !deseoId || !votante) {
+    return jsonOut({ ok: false, error: "faltan ensamble_id, deseo_id o votante" });
+  }
+  if (!isIntegrante_(ss, ensambleId, votante)) {
+    return jsonOut({ ok: false, error: "votante no es integrante del ensamble" });
+  }
+
+  var deseos = sheetData_(ss, SHEET_DESEOS);
+  if (!deseos) return jsonOut({ ok: false, error: "no hay pestaña Deseos" });
+  var iId = headerIndex_(deseos.headers, "id");
+  var iEnsD = headerIndex_(deseos.headers, "ensamble_id");
+  var iEst = headerIndex_(deseos.headers, "estado");
+  var found = false;
+  for (var r = 1; r < deseos.data.length; r++) {
+    if (
+      String(deseos.data[r][iId] || "").trim() === deseoId &&
+      String(deseos.data[r][iEnsD] || "").trim() === ensambleId
+    ) {
+      var est = iEst >= 0 ? String(deseos.data[r][iEst] || "abierta") : "abierta";
+      if (est === "archivada") {
+        return jsonOut({ ok: false, error: "tema archivado" });
+      }
+      found = true;
+      break;
+    }
+  }
+  if (!found) return jsonOut({ ok: false, error: "deseo no encontrado" });
+
+  var pack = sheetData_(ss, SHEET_VOTOS);
+  if (!pack) return jsonOut({ ok: false, error: "no hay pestaña Votos" });
+  var cols = {
+    ensamble_id: headerIndex_(pack.headers, "ensamble_id"),
+    deseo_id: headerIndex_(pack.headers, "deseo_id"),
+    votante: headerIndex_(pack.headers, "votante"),
+  };
+  if (cols.ensamble_id < 0 || cols.deseo_id < 0 || cols.votante < 0) {
+    return jsonOut({ ok: false, error: "headers incompletos en Votos" });
+  }
+
+  var existingRow = -1;
+  var used = 0;
+  for (var vr = 1; vr < pack.data.length; vr++) {
+    if (String(pack.data[vr][cols.ensamble_id] || "").trim() !== ensambleId) continue;
+    if (String(pack.data[vr][cols.votante] || "").trim() !== votante) continue;
+    used += 1;
+    if (String(pack.data[vr][cols.deseo_id] || "").trim() === deseoId) {
+      existingRow = vr + 1;
+    }
+  }
+
+  if (existingRow > 0) {
+    pack.sheet.deleteRow(existingRow);
+    return jsonOut({ ok: true, liked: false, used: used - 1, remaining: MAX_VOTOS - (used - 1) });
+  }
+
+  if (used >= MAX_VOTOS) {
+    return jsonOut({
+      ok: false,
+      error: "ya usaste tus " + MAX_VOTOS + " votos",
+      used: used,
+      remaining: 0,
+    });
+  }
+
+  var newRow = [];
+  for (var c = 0; c < pack.headers.length; c++) newRow[c] = "";
+  newRow[cols.ensamble_id] = ensambleId;
+  newRow[cols.deseo_id] = deseoId;
+  newRow[cols.votante] = votante;
+  pack.sheet.appendRow(newRow);
+  return jsonOut({
+    ok: true,
+    liked: true,
+    used: used + 1,
+    remaining: MAX_VOTOS - (used + 1),
+  });
+}
+
+function wishlistEstado_(ss, body) {
+  var ensambleId = String(body.ensamble_id || "").trim();
+  var deseoId = String(body.deseo_id || "").trim();
+  var estado = String(body.estado || "").trim();
+  if (!ensambleId || !deseoId || !estado) {
+    return jsonOut({ ok: false, error: "faltan ensamble_id, deseo_id o estado" });
+  }
+  if (estado !== "abierta" && estado !== "a_sacar" && estado !== "archivada") {
+    return jsonOut({ ok: false, error: "estado inválido" });
+  }
+
+  var pack = sheetData_(ss, SHEET_DESEOS);
+  if (!pack) return jsonOut({ ok: false, error: "no hay pestaña Deseos" });
+  var cols = {
+    id: headerIndex_(pack.headers, "id"),
+    ensamble_id: headerIndex_(pack.headers, "ensamble_id"),
+    estado: headerIndex_(pack.headers, "estado"),
+  };
+  if (cols.id < 0 || cols.ensamble_id < 0 || cols.estado < 0) {
+    return jsonOut({ ok: false, error: "headers incompletos en Deseos" });
+  }
+
+  for (var r = 1; r < pack.data.length; r++) {
+    if (
+      String(pack.data[r][cols.id] || "").trim() === deseoId &&
+      String(pack.data[r][cols.ensamble_id] || "").trim() === ensambleId
+    ) {
+      pack.sheet.getRange(r + 1, cols.estado + 1).setValue(estado);
+      return jsonOut({ ok: true, deseo_id: deseoId, estado: estado });
+    }
+  }
+  return jsonOut({ ok: false, error: "deseo no encontrado" });
 }
