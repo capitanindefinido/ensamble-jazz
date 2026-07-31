@@ -1,8 +1,8 @@
 # Plan: Editor visual de charts (`#/editor`)
 
-**Estado:** especificación / backlog — **no implementar todavía**  
+**Estado:** Fase 0 + Fase 1 implementadas (2026-07-30). Fases 2–4 pendientes.  
 **Fecha:** 2026-07-29  
-**Contexto:** el editor actual es un form estrecho (import iReal + chips + textarea + preview). Se siente tosco; el destino es editar en el chart visual.
+**Contexto:** el editor era un form estrecho; ahora el chart visual es la superficie de edición.
 
 ---
 
@@ -138,10 +138,13 @@ Al seleccionar un compás:
 
 ---
 
-## Próximo paso (cuando retomemos)
+## Hecho
 
-1. Confirmar fase 0+1 como primer PR.
-2. Spike corto: ¿el AST actual soporta mutar un chord slot y volver a string sin perder markers?
-3. Implementar fase 0 → 1; dejar 2–4 en backlog.
+- Fase 0: shell UI (chart + inspector, import/avanzado colapsados, barra Guardar).
+- Fase 1: selección de compás, slots 1–4 / % / N.C., `mutate.js` + `serializeAst`, tests.
 
-**No ejecutar este plan hasta que lo pidamos explícitamente.**
+## Próximo
+
+- Fase 2: agregar / borrar / reordenar compases.
+- Fase 3: secciones, reps, endings.
+- Fase 4: undo, atajos, bottom sheet mobile.

@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, Copy, Save, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Copy,
+  Save,
+  Upload,
+} from "lucide-react";
 import Chart from "../chart/Chart.jsx";
 import { parseChart } from "../chart/parse.js";
+import { setMeasureContent, findMeasure } from "../chart/mutate.js";
+import { serializeAst } from "../chart/transpose.js";
 import {
   loadClave,
   saveClave,
@@ -9,17 +18,10 @@ import {
   upsertRepertorioSongs,
 } from "../data/sheetWrite.js";
 import { importSongsFromHtml } from "../ireal/importSongs.js";
-
-const CHORD_PALETTE = [
-  "C", "C-", "C^7", "C-7", "C7", "Co7", "Ch7",
-  "Db", "D", "D-", "D^7", "D-7", "D7",
-  "Eb", "E", "E-", "E7", "F", "F-", "F^7", "F-7", "F7",
-  "G", "G-", "G^7", "G-7", "G7", "Ab", "A", "A-", "A-7", "A7",
-  "Bb", "B", "B-", "B7", "%", "|", "[A]", "[B]", "T44",
-];
+import MeasureInspector from "./MeasureInspector.jsx";
 
 /**
- * Editor discreto en #/editor — no linkeado desde la nav pública.
+ * Editor visual en #/editor — chart como superficie + inspector por compás.
  */
 export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefresh }) {
   const songs = useMemo(() => {
@@ -38,6 +40,9 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
   const [clave, setClave] = useState(() => loadClave());
   const [status, setStatus] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [selectedMeasure, setSelectedMeasure] = useState(null);
+  const [showImport, setShowImport] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [importEnsamble, setImportEnsamble] = useState(
     () => ensambles[0]?.id || ""
@@ -61,22 +66,35 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
   useEffect(() => {
     if (!selected) {
       setChartText("");
+      setSelectedMeasure(null);
       return;
     }
     setChartText(String(selected.chart || ""));
+    setSelectedMeasure(null);
     setStatus(null);
   }, [selected]);
 
-  const { ast, warnings } = useMemo(
-    () => parseChart(chartText),
-    [chartText]
+  const { ast, warnings } = useMemo(() => parseChart(chartText), [chartText]);
+
+  const selectedMeasureObj = useMemo(
+    () => (ast && selectedMeasure != null ? findMeasure(ast, selectedMeasure) : null),
+    [ast, selectedMeasure]
   );
 
-  const insertToken = (token) => {
-    setChartText((prev) => {
-      const pad = prev && !/\s$/.test(prev) ? " " : "";
-      return prev + pad + token;
-    });
+  const dirty = useMemo(() => {
+    if (!selected) return false;
+    return chartText !== String(selected.chart || "");
+  }, [selected, chartText]);
+
+  const applyMeasure = (content) => {
+    if (!ast || selectedMeasure == null) return;
+    const { ast: next, error } = setMeasureContent(ast, selectedMeasure, content);
+    if (error) {
+      setStatus({ type: "err", message: error });
+      return;
+    }
+    setChartText(serializeAst(next));
+    setStatus(null);
   };
 
   const handleCopy = async () => {
@@ -84,7 +102,10 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
       await navigator.clipboard.writeText(chartText);
       setStatus({ type: "ok", message: "Chart copiado al portapapeles" });
     } catch {
-      setStatus({ type: "err", message: "No se pudo copiar — selecciona el texto a mano" });
+      setStatus({
+        type: "err",
+        message: "No se pudo copiar — abrí modo avanzado y seleccioná el texto",
+      });
     }
   };
 
@@ -202,193 +223,229 @@ export default function ChartEditor({ bundle, ensambles, onBack, onLibraryRefres
     <div className="be-root be-editor-root">
       <div className="be-glow" />
       <div className="be-app be-editor-app">
-        <header className="be-head">
+        <header className="be-editor-top">
           <button type="button" className="be-editor-back" onClick={onBack}>
             <ArrowLeft size={14} /> Volver
           </button>
-          <div className="be-eyebrow">Editor de chart</div>
-          <h1 className="be-ensemble">Armar / pegar chart</h1>
-        </header>
-
-        <section className="be-editor-import">
-          <h2 className="be-editor-section-title">Importar iReal</h2>
-          <p className="be-editor-hint">
-            HTML de un tema o playlist. Idempotente: actualiza si existe, crea
-            si falta. No pisa notas ni PDFs ya cargados.
-          </p>
-
-          <label className="be-editor-field">
-            <span>Ensamble destino</span>
-            <select
-              value={importEnsamble}
-              onChange={(e) => setImportEnsamble(e.target.value)}
-            >
-              <option value="">Elige ensamble…</option>
-              {ensambles.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.nombre || e.id}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="be-editor-field">
-            <span>Archivo .html</span>
-            <input type="file" accept=".html,text/html" onChange={handleFile} />
-            {importFileName ? (
-              <span className="be-editor-file-name">{importFileName}</span>
-            ) : null}
-          </label>
-
-          <label className="be-editor-field">
-            <span>O pega el HTML</span>
-            <textarea
-              className="be-editor-ta be-editor-ta-sm"
-              rows={4}
-              value={importHtml}
-              onChange={(e) => {
-                setImportHtml(e.target.value);
-                setImportFileName("");
-                setImportStatus(null);
-              }}
-              placeholder="Pega aquí el HTML exportado de iReal Pro…"
-              spellCheck={false}
-            />
-          </label>
-
-          <div className="be-editor-actions">
-            <button
-              type="button"
-              className="be-play-btn"
-              onClick={handleImport}
-              disabled={importing || !importHtml.trim()}
-            >
-              <Upload size={14} />
-              {importing ? "Importando…" : "Importar al Sheet"}
-            </button>
+          <div className="be-editor-top-main">
+            <div>
+              <div className="be-eyebrow">Editor de chart</div>
+              <h1 className="be-editor-brand">Partitura viva</h1>
+            </div>
+            <div className="be-editor-toolbar">
+              <label className="be-editor-song">
+                <span>Tema</span>
+                <select
+                  value={songKey}
+                  onChange={(e) => setSongKey(e.target.value)}
+                >
+                  <option value="">Elegí un tema…</option>
+                  {songs.map((s) => (
+                    <option
+                      key={`${s.ensamble_id}::${s.titulo}`}
+                      value={`${s.ensamble_id}::${s.titulo}`}
+                    >
+                      [{s.ensamble_id}] {s.titulo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="be-editor-clave">
+                <span>Clave</span>
+                <input
+                  type="password"
+                  value={clave}
+                  onChange={(e) => setClave(e.target.value)}
+                  autoComplete="off"
+                  placeholder="Sheet"
+                />
+              </label>
+              <button
+                type="button"
+                className="be-play-btn ghost"
+                onClick={handleCopy}
+                disabled={!chartText}
+              >
+                <Copy size={14} /> Copiar
+              </button>
+              <button
+                type="button"
+                className="be-play-btn"
+                onClick={handleSave}
+                disabled={!selected || saving || !dirty}
+              >
+                <Save size={14} /> {saving ? "Guardando…" : "Guardar"}
+              </button>
+            </div>
           </div>
-
-          {importStatus ? (
+          {status ? (
             <p
               className={
-                "be-editor-status" +
-                (importStatus.type === "ok" ? " ok" : " err")
+                "be-editor-status" + (status.type === "ok" ? " ok" : " err")
               }
             >
-              {importStatus.type === "ok" ? <Check size={14} /> : null}
-              {importStatus.message}
+              {status.type === "ok" ? <Check size={14} /> : null}
+              {status.message}
             </p>
+          ) : dirty ? (
+            <p className="be-editor-status warn">Cambios sin guardar</p>
           ) : null}
-        </section>
+        </header>
 
-        <hr className="be-editor-sep" />
+        <div className="be-editor-stage">
+          <div className="be-editor-canvas">
+            {!selected ? (
+              <div className="be-editor-empty">
+                <p className="be-editor-empty-title">Elegí un tema</p>
+                <p className="be-editor-empty-copy">
+                  Después tocá un compás en el papel para editarlo.
+                </p>
+              </div>
+            ) : (
+              <div className="be-editor-paper be-paper">
+                <div className="be-paper-eyebrow">
+                  {selected.ensamble_id} · editando
+                  {dirty ? " · sin guardar" : ""}
+                </div>
+                <h2 className="be-paper-title">{selected.titulo}</h2>
+                {selected.compositor ? (
+                  <div className="be-paper-composer">{selected.compositor}</div>
+                ) : null}
+                {warnings.length > 0 ? (
+                  <p className="be-chart-warn">
+                    {warnings.length} aviso
+                    {warnings.length === 1 ? "" : "s"} en el chart.
+                  </p>
+                ) : null}
+                {ast?.sections?.length ? (
+                  <Chart
+                    ast={ast}
+                    selectedMeasure={selectedMeasure}
+                    onMeasureSelect={setSelectedMeasure}
+                    selectLabel="Editar"
+                  />
+                ) : (
+                  <p className="be-notes-empty">
+                    Este tema aún no tiene chart. Importá desde iReal o usá
+                    modo avanzado.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
 
-        <h2 className="be-editor-section-title">Editar chart</h2>
-
-        <label className="be-editor-field">
-          <span>Tema</span>
-          <select
-            value={songKey}
-            onChange={(e) => setSongKey(e.target.value)}
-          >
-            <option value="">Elige un tema…</option>
-            {songs.map((s) => (
-              <option
-                key={`${s.ensamble_id}::${s.titulo}`}
-                value={`${s.ensamble_id}::${s.titulo}`}
-              >
-                [{s.ensamble_id}] {s.titulo}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="be-editor-palette">
-          {CHORD_PALETTE.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className="be-editor-chip"
-              onClick={() => insertToken(t)}
+          <aside className="be-editor-side">
+            <MeasureInspector
+              measure={selectedMeasureObj}
+              measureIndex={selectedMeasure}
               disabled={!selected}
-            >
-              {t}
-            </button>
-          ))}
+              onApply={applyMeasure}
+            />
+          </aside>
         </div>
 
-        <label className="be-editor-field">
-          <span>Chart</span>
-          <textarea
-            className="be-editor-ta"
-            rows={10}
-            value={chartText}
-            onChange={(e) => setChartText(e.target.value)}
-            disabled={!selected}
-            placeholder="T44&#10;[A] Bb^7 | (Eb7) % | D-7 | G7 |"
-            spellCheck={false}
-          />
-        </label>
+        <details
+          className="be-editor-drawer"
+          open={showImport}
+          onToggle={(e) => setShowImport(e.target.open)}
+        >
+          <summary>
+            <Upload size={14} /> Importar iReal
+            <ChevronDown size={14} className="be-editor-drawer-chev" />
+          </summary>
+          <div className="be-editor-drawer-body">
+            <p className="be-editor-hint">
+              HTML de un tema o playlist. Idempotente: actualiza si existe,
+              crea si falta. No pisa notas ni PDFs.
+            </p>
+            <label className="be-editor-field">
+              <span>Ensamble destino</span>
+              <select
+                value={importEnsamble}
+                onChange={(e) => setImportEnsamble(e.target.value)}
+              >
+                <option value="">Elige ensamble…</option>
+                {ensambles.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nombre || e.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="be-editor-field">
+              <span>Archivo .html</span>
+              <input type="file" accept=".html,text/html" onChange={handleFile} />
+              {importFileName ? (
+                <span className="be-editor-file-name">{importFileName}</span>
+              ) : null}
+            </label>
+            <label className="be-editor-field">
+              <span>O pega el HTML</span>
+              <textarea
+                className="be-editor-ta be-editor-ta-sm"
+                rows={4}
+                value={importHtml}
+                onChange={(e) => {
+                  setImportHtml(e.target.value);
+                  setImportFileName("");
+                  setImportStatus(null);
+                }}
+                placeholder="HTML exportado de iReal Pro…"
+                spellCheck={false}
+              />
+            </label>
+            <div className="be-editor-actions">
+              <button
+                type="button"
+                className="be-play-btn"
+                onClick={handleImport}
+                disabled={importing || !importHtml.trim()}
+              >
+                <Upload size={14} />
+                {importing ? "Importando…" : "Importar al Sheet"}
+              </button>
+            </div>
+            {importStatus ? (
+              <p
+                className={
+                  "be-editor-status" +
+                  (importStatus.type === "ok" ? " ok" : " err")
+                }
+              >
+                {importStatus.type === "ok" ? <Check size={14} /> : null}
+                {importStatus.message}
+              </p>
+            ) : null}
+          </div>
+        </details>
 
-        {warnings.length > 0 ? (
-          <p className="be-chart-warn">
-            {warnings.length} aviso{warnings.length === 1 ? "" : "s"} en el
-            preview.
-          </p>
-        ) : null}
+        <details
+          className="be-editor-drawer"
+          open={showAdvanced}
+          onToggle={(e) => setShowAdvanced(e.target.open)}
+        >
+          <summary>
+            Modo avanzado (texto)
+            <ChevronDown size={14} className="be-editor-drawer-chev" />
+          </summary>
+          <div className="be-editor-drawer-body">
+            <label className="be-editor-field">
+              <span>Chart raw</span>
+              <textarea
+                className="be-editor-ta"
+                rows={8}
+                value={chartText}
+                onChange={(e) => setChartText(e.target.value)}
+                disabled={!selected}
+                placeholder={"T44\n[A] Bb^7 | (Eb7) % | D-7 | G7 |"}
+                spellCheck={false}
+              />
+            </label>
+          </div>
+        </details>
 
-        <div className="be-editor-preview be-paper">
-          {selected && ast?.sections?.length ? (
-            <Chart ast={ast} />
-          ) : (
-            <p className="be-notes-empty">El preview aparece aquí.</p>
-          )}
-        </div>
-
-        <label className="be-editor-field">
-          <span>Clave de edición</span>
-          <input
-            type="password"
-            value={clave}
-            onChange={(e) => setClave(e.target.value)}
-            autoComplete="off"
-            placeholder="clave del Sheet (Config)"
-          />
-        </label>
-
-        <div className="be-editor-actions">
-          <button
-            type="button"
-            className="be-play-btn ghost"
-            onClick={handleCopy}
-            disabled={!chartText}
-          >
-            <Copy size={14} /> Copiar
-          </button>
-          <button
-            type="button"
-            className="be-play-btn"
-            onClick={handleSave}
-            disabled={!selected || saving}
-          >
-            <Save size={14} /> {saving ? "Guardando…" : "Guardar"}
-          </button>
-        </div>
-
-        {status ? (
-          <p
-            className={
-              "be-editor-status" + (status.type === "ok" ? " ok" : " err")
-            }
-          >
-            {status.type === "ok" ? <Check size={14} /> : null}
-            {status.message}
-          </p>
-        ) : null}
-
-        <p className="be-editor-hint">
-          Ruta discreta <code>#/editor</code>. Sin Apps Script, usa Copiar y
-          pega en la celda chart del Sheet.
+        <p className="be-editor-hint be-editor-foot">
+          Ruta discreta <code>#/editor</code>. Guardar escribe en el Sheet.
         </p>
       </div>
     </div>

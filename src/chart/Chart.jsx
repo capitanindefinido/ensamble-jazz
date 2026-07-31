@@ -9,14 +9,18 @@ export default function Chart({
   ast,
   activeMeasure = null,
   startMeasure = null,
+  selectedMeasure = null,
   onMeasureSelect = null,
+  selectLabel = "Partir desde",
 }) {
   const rootRef = useRef(null);
+  const focusIndex =
+    selectedMeasure != null ? selectedMeasure : activeMeasure;
 
   useEffect(() => {
-    if (activeMeasure == null || !rootRef.current) return;
+    if (focusIndex == null || !rootRef.current) return;
     const el = rootRef.current.querySelector(
-      `[data-measure="${activeMeasure}"]`
+      `[data-measure="${focusIndex}"]`
     );
     if (!el || typeof el.scrollIntoView !== "function") return;
     const reduce =
@@ -28,7 +32,7 @@ export default function Chart({
       inline: "nearest",
       behavior: reduce ? "auto" : "smooth",
     });
-  }, [activeMeasure]);
+  }, [focusIndex]);
 
   if (!ast?.sections?.length) {
     return null;
@@ -50,6 +54,8 @@ export default function Chart({
                     measure={m}
                     active={activeMeasure === m.index}
                     start={startMeasure === m.index}
+                    selected={selectedMeasure === m.index}
+                    selectLabel={selectLabel}
                     onSelect={
                       onMeasureSelect
                         ? () => onMeasureSelect(m.index)
@@ -69,7 +75,7 @@ export default function Chart({
   );
 }
 
-function Measure({ measure: m, active, start, onSelect }) {
+function Measure({ measure: m, active, start, selected, onSelect, selectLabel }) {
   const cls =
     "be-chart-measure" +
     (m.invalid ? " invalid" : "") +
@@ -77,6 +83,7 @@ function Measure({ measure: m, active, start, onSelect }) {
     (m.closeRepeat ? " close-rep" : "") +
     (active ? " active" : "") +
     (start ? " start" : "") +
+    (selected ? " selected" : "") +
     (onSelect ? " selectable" : "");
 
   return (
@@ -86,8 +93,9 @@ function Measure({ measure: m, active, start, onSelect }) {
       role={onSelect ? "button" : undefined}
       tabIndex={onSelect ? 0 : undefined}
       aria-label={
-        onSelect ? `Partir desde compás ${m.index + 1}` : undefined
+        onSelect ? `${selectLabel} compás ${m.index + 1}` : undefined
       }
+      aria-pressed={onSelect ? !!selected : undefined}
       onClick={onSelect || undefined}
       onKeyDown={
         onSelect

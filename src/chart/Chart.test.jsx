@@ -77,6 +77,16 @@ describe("Chart renderer", () => {
     expect(chord?.querySelector(".be-chord-ext")?.textContent).toBe("7");
   });
 
+  it("marca .selected en el compás elegido", () => {
+    const { ast } = parseChart(EAST_OF_SUN_CHART);
+    const { container } = render(
+      <Chart ast={ast} selectedMeasure={2} onMeasureSelect={() => {}} />
+    );
+    expect(
+      container.querySelector('[data-measure="2"]')?.className
+    ).toContain("selected");
+  });
+
   it("marca .start y notifica onMeasureSelect al tocar", () => {
     const { ast } = parseChart(EAST_OF_SUN_CHART);
     const picked = [];
