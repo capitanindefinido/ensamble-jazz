@@ -288,16 +288,45 @@
 .be-qr-img{width:220px; height:220px; margin:0 auto 12px; display:block;}
 .be-qr-url{font-family:"Space Mono",monospace; font-size:9px; word-break:break-all; color:#8a7a52; margin:0;}
 
-/* Modo atril */
-.be-sheet.atril{max-width:none; width:100%; height:100%; border-radius:0; overflow:auto;}
-.be-sheet-scrim.atril{align-items:stretch; padding:0; background:#1a1510;}
-.be-sheet.atril .be-paper{min-height:100%; padding:20px 28px;}
+/* Modo atril — inmersivo por CSS (iPad: sin depender del Fullscreen API) */
+.be-sheet-scrim.atril{
+  align-items:stretch; justify-content:stretch; padding:0; background:#1a1510;
+  height:100dvh; width:100%; max-height:100dvh; overscroll-behavior:none;
+}
+.be-sheet.atril{
+  max-width:none; width:100%; height:100%; max-height:100dvh; border-radius:0;
+  overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  padding-top:env(safe-area-inset-top, 0px);
+  padding-right:env(safe-area-inset-right, 0px);
+  padding-bottom:env(safe-area-inset-bottom, 0px);
+  padding-left:env(safe-area-inset-left, 0px);
+}
+.be-sheet.atril .be-sheet-close{
+  top:calc(12px + env(safe-area-inset-top, 0px));
+  right:calc(12px + env(safe-area-inset-right, 0px));
+  width:44px; height:44px;
+}
+.be-sheet.atril .be-paper{
+  min-height:100%; border-radius:0;
+  padding:20px 28px calc(28px + env(safe-area-inset-bottom, 0px));
+}
 .be-sheet.atril .be-paper-title{font-size:42px;}
 .be-sheet.atril .be-chord{font-size:28px;}
 .be-sheet.atril .be-chart-measure{min-height:72px; padding:14px 8px;}
 .be-sheet.atril .be-chart-label{font-size:14px;}
 .be-sheet.atril .be-chart-chords.n3 .be-chord{font-size:20px;}
 .be-sheet.atril .be-chart-chords.n4 .be-chord{font-size:17px;}
+
+/* iPad / tablet: tipografía un poco más cómoda a distancia */
+@media (min-width:768px) and (pointer:coarse){
+  .be-sheet.atril .be-paper{padding:28px 36px calc(36px + env(safe-area-inset-bottom, 0px));}
+  .be-sheet.atril .be-paper-title{font-size:48px;}
+  .be-sheet.atril .be-chord{font-size:32px;}
+  .be-sheet.atril .be-chart-measure{min-height:84px; padding:16px 10px;}
+  .be-sheet.atril .be-chart-chords.n3 .be-chord{font-size:24px;}
+  .be-sheet.atril .be-chart-chords.n4 .be-chord{font-size:20px;}
+}
 
 /* Impresión: solo el papel/chart */
 @media print{

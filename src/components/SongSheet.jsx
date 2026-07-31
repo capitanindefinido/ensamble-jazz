@@ -44,6 +44,15 @@ function drivePreviewUrl(url) {
   return url;
 }
 
+/** iPad/iPhone: el Fullscreen API sale con gestos de scroll — mejor atril solo-CSS. */
+function isAppleTouchDevice() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  // iPadOS 13+ se reporta como MacIntel con multitouch
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
 export default function SongSheet({ song, onClose, onSongUpdate }) {
   const sheetBpm = clampBpm(Number(song.bpm) || 120);
   const [showChart, setShowChart] = useState(false);
@@ -253,11 +262,14 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
   const enterAtril = async () => {
     setShowChart(true);
     setAtril(true);
-    try {
-      const el = paperRef.current?.closest(".be-sheet") || paperRef.current;
-      if (el?.requestFullscreen) await el.requestFullscreen();
-    } catch {
-      // fullscreen puede fallar en iOS; el layout atril igual ayuda
+    // En iPad el FS nativo se cierra al scrollear; el layout CSS ya es inmersivo.
+    if (!isAppleTouchDevice()) {
+      try {
+        const el = paperRef.current?.closest(".be-sheet") || paperRef.current;
+        if (el?.requestFullscreen) await el.requestFullscreen();
+      } catch {
+        // sin FS el atril CSS sigue igual
+      }
     }
     try {
       if (navigator.wakeLock?.request) {
@@ -278,16 +290,15 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
     }
   };
 
+  // Atril ≠ fullscreen del browser: si el usuario sale de FS (Esc / gesto),
+  // el modo atril CSS permanece hasta que toque ✕.
   useEffect(() => {
     if (!atril) return;
-    const onFs = () => {
-      if (!document.fullscreenElement) {
-        setAtril(false);
-        releaseWakeLock();
-      }
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
     };
-    document.addEventListener("fullscreenchange", onFs);
-    return () => document.removeEventListener("fullscreenchange", onFs);
   }, [atril]);
 
   useEffect(() => {
@@ -301,12 +312,16 @@ export default function SongSheet({ song, onClose, onSongUpdate }) {
   const bpmDirty = bpm !== sheetBpm;
 
   return (
-    <div className={"be-sheet-scrim" + (atril ? " atril" : "")} onClick={handleClose}>
+    <div
+      className={"be-sheet-scrim" + (atril ? " atril" : "")}
+      onClick={atril ? undefined : handleClose}
+    >
       <div
         className={"be-sheet" + (atril ? " atril" : "")}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label={song.titulo}
+        aria-modal="true"
       >
         <button
           className="be-sheet-close no-print"
