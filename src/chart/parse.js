@@ -3,6 +3,8 @@
  * Nunca lanza: devuelve { ast, warnings }.
  */
 
+import { parseNavDirective } from "./nav.js";
+
 export const QUALITY = {
   maj: "maj",
   min: "min",
@@ -225,10 +227,24 @@ function tokenizeLine(line) {
       continue;
     }
 
-    if (s[i] === "N" && (s[i + 1] === "1" || s[i + 1] === "2")) {
-      tokens.push({ type: "ending", value: Number(s[i + 1]) });
-      i += 2;
+    const endMatch = s.slice(i).match(/^N(\d)\b/);
+    if (endMatch) {
+      tokens.push({ type: "ending", value: Number(endMatch[1]) });
+      i += endMatch[0].length;
       continue;
+    }
+
+    if (s[i] === "<") {
+      const end = s.indexOf(">", i);
+      if (end !== -1) {
+        tokens.push({
+          type: "nav",
+          value: s.slice(i + 1, end).trim(),
+          raw: s.slice(i, end + 1),
+        });
+        i = end + 1;
+        continue;
+      }
     }
 
     if (s[i] === "(") {
@@ -254,7 +270,8 @@ function tokenizeLine(line) {
       s[j] !== "[" &&
       s[j] !== "{" &&
       s[j] !== "}" &&
-      s[j] !== "("
+      s[j] !== "(" &&
+      s[j] !== "<"
     ) {
       j += 1;
     }
@@ -262,7 +279,11 @@ function tokenizeLine(line) {
     if (word === "%") tokens.push({ type: "repeatPrev" });
     else if (word === "N.C." || word === "NC" || word === "n.c." || word === "nc") {
       tokens.push({ type: "noChord" });
-    } else if (parseChord(word)) tokens.push({ type: "chord", value: word });
+    } else if (word === "S") tokens.push({ type: "segno" });
+    else if (word === "Q") tokens.push({ type: "coda" });
+    else if (word === "U") tokens.push({ type: "endMark" });
+    else if (word === "f") tokens.push({ type: "fermata" });
+    else if (parseChord(word)) tokens.push({ type: "chord", value: word });
     else tokens.push({ type: "unknown", value: word });
     i = j;
   }
@@ -288,6 +309,13 @@ export function parseChart(text) {
   let pendingOpenRepeat = false;
   let pendingEnding = null;
   let pendingAlternate = null;
+  let pendingSegno = false;
+  let pendingCoda = false;
+  let pendingFermata = false;
+  let pendingEndMark = false;
+  let pendingFine = false;
+  let pendingJump = null;
+  let pendingRepeatX = null;
   let lastMeasure = null;
 
   const ensureSection = (label) => {
@@ -318,12 +346,27 @@ export function parseChart(text) {
       openRepeat: pendingOpenRepeat,
       closeRepeat,
       ending: pendingEnding,
+      segno: pendingSegno,
+      coda: pendingCoda,
+      fermata: pendingFermata,
+      endMark: pendingEndMark,
+      fine: pendingFine,
+      jump: pendingJump,
+      repeatX: pendingRepeatX,
       invalid,
       raw: invalid ? raw : undefined,
     };
     pendingAlternate = null;
     pendingOpenRepeat = false;
-    pendingEnding = null;
+    // ending es sticky hasta N2/N3 o hasta cerrar la casilla con }
+    if (closeRepeat) pendingEnding = null;
+    pendingSegno = false;
+    pendingCoda = false;
+    pendingFermata = false;
+    pendingEndMark = false;
+    pendingFine = false;
+    pendingJump = null;
+    pendingRepeatX = null;
     section.measures.push(measure);
     lastMeasure = measure;
   };
@@ -376,6 +419,35 @@ export function parseChart(text) {
         case "ending":
           pendingEnding = tok.value;
           break;
+        case "segno":
+          pendingSegno = true;
+          break;
+        case "coda":
+          pendingCoda = true;
+          break;
+        case "fermata":
+          pendingFermata = true;
+          break;
+        case "endMark":
+          pendingEndMark = true;
+          break;
+        case "nav": {
+          const nav = parseNavDirective(tok.value);
+          if (!nav) {
+            warnings.push({
+              line: lineNo,
+              text: tok.raw || tok.value,
+              message: `Anotación no navegable «${tok.value}» (queda ignorada en el form)`,
+            });
+            break;
+          }
+          if (nav.type === "fine") pendingFine = true;
+          else if (nav.type === "repeatX") pendingRepeatX = nav.times;
+          else if (nav.type === "jump") {
+            pendingJump = { kind: nav.kind, al: nav.al };
+          }
+          break;
+        }
         case "alternate": {
           const ch = parseChord(tok.value);
           if (ch) pendingAlternate = ch;

@@ -3,6 +3,7 @@
  * Timing vía LookaheadScheduler — nunca setInterval para el tempo.
  */
 
+import { playbackTimeline } from "../chart/form.js";
 import { pitchClass } from "../chart/transpose.js";
 import {
   LookaheadScheduler,
@@ -10,6 +11,8 @@ import {
   unlockAudio,
   getHarmonyBus,
 } from "./scheduler.js";
+
+export { flattenMeasures } from "../chart/form.js";
 
 /** Intervalos (semitonos desde la raíz) por calidad del parser. */
 export const QUALITY_INTERVALS = {
@@ -24,15 +27,6 @@ export const QUALITY_INTERVALS = {
 
 const BASS_OCTAVE = 2;
 const VOICE_OCTAVE = 4;
-
-export function flattenMeasures(ast) {
-  if (!ast?.sections?.length) return [];
-  const out = [];
-  for (const sec of ast.sections) {
-    for (const m of sec.measures) out.push(m);
-  }
-  return out;
-}
 
 export function beatsPerMeasure(ast) {
   return ast?.timeSig?.num || 4;
@@ -263,7 +257,8 @@ export class ChartPlayer {
    */
   async play(opts = {}) {
     if (!this._ast) return;
-    const measures = flattenMeasures(this._ast);
+    // Form expandido: reps, casillas, D.C./D.S., coda, Fine
+    const measures = playbackTimeline(this._ast);
     if (!measures.length) return;
 
     const ctx = await unlockAudio();
@@ -272,9 +267,12 @@ export class ChartPlayer {
     const beats = beatsPerMeasure(this._ast);
     const hasFrom =
       opts.fromMeasure != null && Number.isFinite(Number(opts.fromMeasure));
-    const startMeasureIdx = hasFrom
-      ? clampFromMeasure(opts.fromMeasure, measures.length)
-      : 0;
+    let startMeasureIdx = 0;
+    if (hasFrom) {
+      const want = Math.floor(Number(opts.fromMeasure));
+      const at = measures.findIndex((m) => m.index === want);
+      startMeasureIdx = at >= 0 ? at : 0;
+    }
 
     // Retomar desde pausa (solo si no pedimos un fromMeasure explícito)
     if (this._pausedAt && !hasFrom) {
@@ -370,6 +368,8 @@ export class ChartPlayer {
     const { beats, measures } = cur;
 
     while (cur.nextTime < now + scheduleAheadSec) {
+      if (cur.phase === "done") return;
+
       const when = cur.nextTime;
       const isDownbeat = cur.beat === 0;
 
@@ -410,7 +410,16 @@ export class ChartPlayer {
         cur.beat += 1;
         if (cur.beat >= beats) {
           cur.beat = 0;
-          cur.measureIdx = (cur.measureIdx + 1) % measures.length;
+          const next = cur.measureIdx + 1;
+          if (next >= measures.length) {
+            // Fin del form expandido (no loop del chart crudo)
+            cur.phase = "done";
+            scheduleVisual(when + spb * 0.05, () => {
+              this.stop({ silent: false });
+            });
+          } else {
+            cur.measureIdx = next;
+          }
         }
       }
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { formatJump } from "./nav.js";
 import { formatPitch } from "./parse.js";
 
 /**
@@ -109,6 +110,33 @@ function Measure({ measure: m, active, start, selected, onSelect, selectLabel })
       }
     >
       {m.ending ? <span className="be-chart-ending">N{m.ending}</span> : null}
+      <span className="be-chart-marks" aria-hidden={!m.segno && !m.coda && !m.fine && !m.jump && !m.fermata}>
+        {m.segno ? (
+          <span className="be-chart-mark segno" title="Segno">
+            𝄋
+          </span>
+        ) : null}
+        {m.coda ? (
+          <span className="be-chart-mark coda" title="Coda">
+            𝄌
+          </span>
+        ) : null}
+        {m.fermata ? (
+          <span className="be-chart-mark fermata" title="Fermata">
+            𝄐
+          </span>
+        ) : null}
+        {m.fine ? (
+          <span className="be-chart-mark fine" title="Fine">
+            Fine
+          </span>
+        ) : null}
+        {m.jump ? (
+          <span className="be-chart-mark jump" title={formatJump(m.jump)}>
+            {formatJump(m.jump)}
+          </span>
+        ) : null}
+      </span>
       {m.alternate ? (
         <span className="be-chart-alt">
           <ChordView chord={m.alternate} />

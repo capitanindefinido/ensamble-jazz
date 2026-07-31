@@ -4,6 +4,7 @@
  * Si aparece un token desconocido, error (no escribir a medias).
  */
 
+import { formatJump, parseNavDirective } from "../chart/nav.js";
 import { parseChart } from "../chart/parse.js";
 
 function emptyMeasure() {
@@ -15,6 +16,13 @@ function emptyMeasure() {
     openRepeat: false,
     closeRepeat: false,
     ending: null,
+    segno: false,
+    coda: false,
+    fermata: false,
+    endMark: false,
+    fine: false,
+    jump: null,
+    repeatX: null,
   };
 }
 
@@ -24,7 +32,14 @@ function hasContent(m) {
     m.alternate != null ||
     m.repeatPrev ||
     m.noChord ||
-    m.ending != null
+    m.ending != null ||
+    m.segno ||
+    m.coda ||
+    m.fermata ||
+    m.endMark ||
+    m.fine ||
+    m.jump != null ||
+    m.repeatX != null
   );
 }
 
@@ -37,6 +52,13 @@ function cloneMeasure(m) {
     openRepeat: false,
     closeRepeat: false,
     ending: null,
+    segno: false,
+    coda: false,
+    fermata: false,
+    endMark: false,
+    fine: false,
+    jump: null,
+    repeatX: null,
   };
 }
 
@@ -171,7 +193,14 @@ export function translateIrealBody(raw) {
         break;
       }
       const cleaned = cleanAnnotation(s.slice(i + 1, end));
-      if (cleaned) notes.push(cleaned);
+      const nav = parseNavDirective(cleaned);
+      if (nav?.type === "fine") measure.fine = true;
+      else if (nav?.type === "repeatX") measure.repeatX = nav.times;
+      else if (nav?.type === "jump") {
+        measure.jump = { kind: nav.kind, al: nav.al };
+      } else if (cleaned) {
+        notes.push(cleaned);
+      }
       i = end + 1;
       continue;
     }
@@ -200,9 +229,38 @@ export function translateIrealBody(raw) {
       while (i < s.length && (s[i] === "Y" || s[i] === "y")) i += 1;
       continue;
     }
-    // Q coda, S segno, U ending player, f fine, p pause;
+    // S segno, Q coda, U end, f fermata — navegación / marcas
+    if (s[i] === "S") {
+      measure.segno = true;
+      i += 1;
+      continue;
+    }
+    if (s[i] === "Q") {
+      measure.coda = true;
+      i += 1;
+      continue;
+    }
+    if (s[i] === "U") {
+      measure.endMark = true;
+      i += 1;
+      continue;
+    }
+    if (s[i] === "f") {
+      measure.fermata = true;
+      i += 1;
+      continue;
+    }
+    // p = slash (repite el acorde anterior)
+    if (s[i] === "p") {
+      const prev =
+        measure.chords[measure.chords.length - 1] ||
+        section?.measures?.[section.measures.length - 1]?.chords?.slice(-1)[0];
+      if (prev) measure.chords.push(prev);
+      i += 1;
+      continue;
+    }
     // s/l = tamaño de acorde (solo visual)
-    if ("QSUfpl".includes(s[i]) || s[i] === "s") {
+    if (s[i] === "s" || s[i] === "l") {
       i += 1;
       continue;
     }
@@ -302,6 +360,13 @@ export function translateIrealBody(raw) {
       let cell = "";
       if (m.openRepeat) cell += "{ ";
       if (m.ending != null) cell += `N${m.ending} `;
+      if (m.segno) cell += "S ";
+      if (m.coda) cell += "Q ";
+      if (m.fermata) cell += "f ";
+      if (m.endMark) cell += "U ";
+      if (m.fine) cell += "<Fine> ";
+      if (m.jump) cell += `<${formatJump(m.jump)}> `;
+      if (m.repeatX) cell += `<${m.repeatX}x> `;
       if (m.alternate) cell += `(${m.alternate}) `;
       if (m.noChord) cell += "N.C.";
       else if (m.repeatPrev) cell += "%";

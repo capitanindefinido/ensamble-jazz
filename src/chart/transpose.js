@@ -6,6 +6,7 @@
  * Nunca preferir dobles alteraciones si existe alternativa.
  */
 
+import { formatNavPrefix } from "./nav.js";
 import { LETTERS, formatChord, formatPitch, parseKeyString } from "./parse.js";
 
 /** Pitch class desde C: C D E F G A B */
@@ -234,6 +235,7 @@ export function serializeAst(ast) {
       let cell = "";
       if (m.openRepeat) cell += "{ ";
       if (m.ending) cell += `N${m.ending} `;
+      cell += formatNavPrefix(m);
       if (m.alternate) cell += `(${formatChord(m.alternate)}) `;
       if (m.noChord) cell += "N.C.";
       else if (m.repeatPrev) cell += "%";
